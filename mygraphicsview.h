@@ -30,6 +30,7 @@ public slots:
 
 public:
     explicit MyGraphicsView(QGraphicsScene *scene, QWidget *parent = nullptr);
+    void generateProps(int count);
 
 protected:
     void keyPressEvent(QKeyEvent *event);

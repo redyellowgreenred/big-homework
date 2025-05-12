@@ -11,13 +11,17 @@ SOURCES += \
     main.cpp \
     mainwindow.cpp \
     mygraphicsview.cpp \
-    player.cpp
+    player.cpp \
+    prop.cpp \
+    propfactory.cpp
 
 HEADERS += \
     character.h \
     mainwindow.h \
     mygraphicsview.h \
-    player.h
+    player.h \
+    prop.h \
+    propfactory.h
 
 FORMS += \
     mainwindow.ui

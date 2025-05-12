@@ -2,5 +2,6 @@
     <qresource prefix="/">
         <file>figs/capoo.gif</file>
         <file>figs/background.jpg</file>
+        <file>props/knife.png</file>
     </qresource>
 </RCC>

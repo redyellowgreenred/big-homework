@@ -1,4 +1,5 @@
 #include "mygraphicsview.h"
+#include "propfactory.h"
 #include <QDebug>
 #include <QGraphicsPixmapItem>
 #include <QGraphicsScene>
@@ -113,6 +114,9 @@ MyGraphicsView::MyGraphicsView(QGraphicsScene *scene, QWidget *parent)
 
     // 居中显示人物
     centerOn(m_player);
+
+    //初始化生成道具
+    generateProps(50);
 }
 
 void MyGraphicsView::keyPressEvent(QKeyEvent *event) {
@@ -123,4 +127,17 @@ void MyGraphicsView::keyPressEvent(QKeyEvent *event) {
 void MyGraphicsView::keyReleaseEvent(QKeyEvent *event) {
     m_player->removePressedKey(event->key());
     QGraphicsView::keyReleaseEvent(event);
+}
+
+//初始化道具生成
+void MyGraphicsView::generateProps(int count) {
+    QPointF center = m_background->boundingRect().center();
+    const int bgSize = 3600;
+    PropFactory::setMapRadius(bgSize / 2);
+
+    for (int i = 0; i < count; ++i) {
+        Prop* prop = PropFactory::createRandomProp(center);
+        prop->setZValue(5);
+        scene()->addItem(prop);
+    }
 }
