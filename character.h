@@ -5,6 +5,13 @@
 #include <QGraphicsPixmapItem>
 #include <QPropertyAnimation>
 
+// 道具类型枚举
+enum class PropType {
+    Knife,
+    COUNT
+};
+
+//角色状态枚举
 enum class CharacterState {
     Idle,
     Moving,
@@ -47,6 +54,10 @@ public:
     virtual void moveTo(const QPointF& pos);
     virtual void stopMoving();
 
+    //道具系统
+    void addProp(PropType prop);
+
+    //飞刀系统
 signals:
     void healthChanged(int newHealth);
     void positionChanged(QPointF newPos);

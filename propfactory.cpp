@@ -15,7 +15,7 @@ Prop* PropFactory::createRandomProp(const QPointF& centerPos){
 
     switch(type){
     case PropType::Knife:
-        prop = new InteractiveProp(PropType::Knife);
+        prop = new Prop(PropType::Knife);
         break;
     default:
         break;

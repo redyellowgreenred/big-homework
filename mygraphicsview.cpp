@@ -110,6 +110,8 @@ MyGraphicsView::MyGraphicsView(QGraphicsScene *scene, QWidget *parent)
     // 路径运动定时器（每 30ms 更新位置）
     connect(&m_pathTimer, &QTimer::timeout, this,
             &MyGraphicsView::updateCirclePath);
+    connect(&m_pathTimer, &QTimer::timeout, this,
+            &MyGraphicsView::checkCollision);
     m_pathTimer.start(30);
 
     // 居中显示人物
@@ -139,5 +141,29 @@ void MyGraphicsView::generateProps(int count) {
         Prop* prop = PropFactory::createRandomProp(center);
         prop->setZValue(5);
         scene()->addItem(prop);
+
+        connect(prop, &Prop::removeRequested, this, [this](Prop* prop) {
+            scene()->removeItem(prop);
+            delete prop;
+        });
+    }
+}
+
+//碰撞检测函数
+void MyGraphicsView::checkCollision() {
+    if (!m_player) return;
+
+    // 获取玩家周围的物品
+    QList<QGraphicsItem*> items = scene()->items(m_player->pos(), Qt::IntersectsItemShape, Qt::DescendingOrder);
+
+    for (QGraphicsItem* item : items) {
+        Prop* prop = dynamic_cast<Prop*>(item);
+        if (prop) {
+            // 计算距离
+            qreal distance = QLineF(m_player->pos(), prop->pos()).length();
+            if (distance < 80) {  // 拾取半径
+                prop->interact(m_player);
+            }
+        }
     }
 }

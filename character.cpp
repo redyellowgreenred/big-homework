@@ -115,3 +115,12 @@ void Character::stopMoving()
         }
     }
 }
+
+void Character::addProp(PropType prop){
+    switch(prop){
+    case PropType::Knife:
+        break;
+    default:
+        break;
+    }
+}

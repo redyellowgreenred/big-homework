@@ -31,6 +31,7 @@ public slots:
 public:
     explicit MyGraphicsView(QGraphicsScene *scene, QWidget *parent = nullptr);
     void generateProps(int count);
+    void checkCollision();
 
 protected:
     void keyPressEvent(QKeyEvent *event);

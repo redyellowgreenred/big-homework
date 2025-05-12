@@ -32,11 +32,15 @@ void Prop::loadIcon() {
     }
 }
 
-InteractiveProp::InteractiveProp(PropType type, QGraphicsItem* parent)
-    :Prop(type, parent){}
+void Prop::interact(Character* character) {
+    if (!character || !character->isAlive()) return;
+    // 基础交互逻辑
+    switch(m_type){
+    case PropType::Knife:
+        emit removeRequested(this);
+        break;
+    default:
+        break;
+    }
 
-void InteractiveProp::interact(Character* character) {
-    // if (!character || !character->isAlive()) return;
-    // // 基础交互逻辑
-    // emit interacted(this);
 }
