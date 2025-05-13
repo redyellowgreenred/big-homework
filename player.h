@@ -3,7 +3,6 @@
 
 #include "character.h"
 #include <QMovie>
-#include <QTimer>
 #include <QSet>
 class MyGraphicsView;
 class Player : public Character {
@@ -19,7 +18,6 @@ private:
 
 public:
     explicit Player(int mapRadius, QGraphicsItem* parent = nullptr);
-    virtual ~Player();
 
     // 玩家特有方法
     void addPressedKey(int key);

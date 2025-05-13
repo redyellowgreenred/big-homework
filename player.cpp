@@ -19,13 +19,6 @@ Player::Player(int mapRadius, QGraphicsItem* parent)
     movementTimer->start(16);
 }
 
-Player::~Player() {
-    if (q_movie) {
-        q_movie->stop();
-        delete q_movie;
-    }
-}
-
 void Player::addPressedKey(int key) {
     pressedKeys.insert(key);
 }

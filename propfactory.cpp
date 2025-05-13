@@ -3,19 +3,19 @@
 #include <QRandomGenerator>
 int PropFactory::mapRadius = 0;
 
-Prop* PropFactory::createRandomProp(const QPointF& centerPos){
+std::unique_ptr<Prop> PropFactory::createRandomProp(const QPointF& centerPos){
     PropType type = static_cast<PropType>(
         QRandomGenerator::global()->bounded(static_cast<int>(PropType::COUNT))
         );
     //随机生成道具类型
     QPointF pos = randomPositionNearCenter(centerPos);
     //随机生成位置
-    Prop* prop = nullptr;
+    std::unique_ptr<Prop> prop = nullptr;
     //初始化道具
 
     switch(type){
     case PropType::Knife:
-        prop = new Prop(PropType::Knife);
+        prop = std::make_unique<Prop>(type);
         break;
     default:
         break;

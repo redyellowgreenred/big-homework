@@ -1,8 +1,9 @@
 #define PROP_H
-
 #include "character.h"
 #include <QGraphicsPixmapItem>
 #include <QObject>
+
+class Player;
 
 class Prop : public QObject, public QGraphicsPixmapItem {
     Q_OBJECT
@@ -17,7 +18,19 @@ public:
     // 道具效果持续时间（毫秒），0表示立即效果
     virtual int duration() const { return 0; }
 
-    virtual void interact(Character* character);
+    template <typename CharacterType>
+    void interact(CharacterType* character) {
+        if (!character || !character->isAlive()) return;
+        // 基础交互逻辑
+        switch(m_type){
+        case PropType::Knife:
+            character->addProp(std::unique_ptr<Prop>(this));
+            break;
+        default:
+            break;
+        }
+
+    }
 
 protected:
     PropType m_type;
@@ -26,6 +39,4 @@ protected:
     // 加载道具图标
     void loadIcon();
 
-signals:
-    void removeRequested(Prop* prop);
 };

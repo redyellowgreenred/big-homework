@@ -14,7 +14,7 @@ private:
     static QPointF randomPositionNearCenter(const QPointF& center);
 
 public:
-    static Prop* createRandomProp(const QPointF& centerPos);
+    static std::unique_ptr<Prop> createRandomProp(const QPointF& centerPos);
     static void setMapRadius(int radius) { mapRadius = radius; }
 };
 

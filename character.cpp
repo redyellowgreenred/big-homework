@@ -1,18 +1,22 @@
 #include "character.h"
+#include "prop.h"
 #include <QDebug>
 
 Character::Character(int mapRadius, QGraphicsItem* parent)
     : QObject(nullptr), QGraphicsPixmapItem(parent),
     p_hp(100), p_maxhp(100), p_moveSpeed(200),mapRadius(mapRadius),
     p_state(CharacterState::Idle),
-    moveAnimation(new QPropertyAnimation(this, "pos", this)),
     isMoving(false) {
     setFlag(QGraphicsItem::ItemIsFocusable);
     setFlag(QGraphicsItem::ItemSendsGeometryChanges);
+
+    m_knifeUpdateTimer = new QTimer(this);
+    moveAnimation = new QPropertyAnimation(this, "pos", this);
+    connect(m_knifeUpdateTimer, &QTimer::timeout, this, &Character::updateKnivesPosition);
+    m_knifeUpdateTimer->start(15);
 }
 
 Character::~Character() {
-    delete moveAnimation;
 }
 
 
@@ -103,6 +107,8 @@ void Character::moveTo(const QPointF& pos)
     if (p_state != CharacterState::Attacking && p_state != CharacterState::Hurt) {
         setState(CharacterState::Moving);
     }
+
+    updateKnivesPosition();
 }
 
 void Character::stopMoving()
@@ -116,11 +122,37 @@ void Character::stopMoving()
     }
 }
 
-void Character::addProp(PropType prop){
-    switch(prop){
-    case PropType::Knife:
-        break;
-    default:
-        break;
+void Character::addProp(std::unique_ptr<Prop> prop){
+    m_knives.push_back(std::move(prop));
+}
+
+void Character::updateKnivesPosition() {
+    QPointF charPos = pos();
+    int count = m_knives.size();
+
+    if (count == 0) return; // No knives to update
+
+    // Increment the base angle for rotation
+    static double baseAngle = 0;
+    baseAngle += 2.0;
+    if (baseAngle >= 360.0) baseAngle -= 360.0;  // Keep baseAngle within 0-360 degrees
+
+    double angleIncrement = 360.0 / count;  // Fixed angle increment for each knife
+
+    // Pre-calculate the sine and cosine values for rotation
+    for (int i = 0; i < count; ++i) {
+        Prop* knife = m_knives[i].get();
+        double angle = baseAngle + (i * angleIncrement);
+        double radian = qDegreesToRadians(angle);
+
+        // Calculate new position for the knife
+        double x = charPos.x() + m_knifeDistance * qCos(radian) + 30.0;
+        double y = charPos.y() + m_knifeDistance * qSin(radian) + 30.0;
+
+        // Only update if position has changed (optional optimization)
+        if (knife->pos() != QPointF(x, y)) {
+            knife->setPos(x, y);
+            knife->setRotation(angle);  // Update rotation based on new position
+        }
     }
 }

@@ -12,7 +12,7 @@
 
 class MyGraphicsView : public QGraphicsView {
 private:
-    Player* m_player;
+    std::unique_ptr<Player> m_player;
     QGraphicsPixmapItem *m_background;      // 背景图像项
     QGraphicsEllipseItem *m_moving_circle;  // 运动圆形
 

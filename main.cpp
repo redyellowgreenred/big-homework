@@ -4,6 +4,8 @@
 #include "mygraphicsview.h"
 
 int main(int argc, char *argv[]) {
+    qSetMessagePattern("%{file}(%{line}): %{message}"); // 可选：格式化输出
+
     QApplication app(argc, argv);
 
     // 初始化游戏场景

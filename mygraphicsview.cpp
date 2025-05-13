@@ -1,8 +1,8 @@
 #include "mygraphicsview.h"
 #include "propfactory.h"
+#include "player.h"
 #include <QDebug>
 #include <QGraphicsPixmapItem>
-#include <QGraphicsScene>
 #include <QGraphicsView>
 #include <QKeyEvent>
 #include <QMovie>
@@ -94,8 +94,9 @@ MyGraphicsView::MyGraphicsView(QGraphicsScene *scene, QWidget *parent)
     initPoint = bgCenter;
 
     // 加载人物 GIF
-    m_player = new Player(bgSize / 2, m_background);
-    m_player->setPos(bgCenter);
+    m_player = std::make_unique<Player>(bgSize / 2, m_background);
+    QPointF playerPos = bgCenter;
+    m_player->setPos(playerPos);
     m_player->setMaxHealth(100);
     m_player->setHealth(100);
     m_player->loadAnimation(":/figs/capoo.gif");
@@ -103,8 +104,8 @@ MyGraphicsView::MyGraphicsView(QGraphicsScene *scene, QWidget *parent)
     qreal scaleFactor = 0.5;
     m_player->setScale(scaleFactor);
 
-    connect(m_player, &Player::positionChanged, this, [this]() {
-        centerOn(m_player); // 跟随角色移动
+    connect(m_player.get(), &Player::positionChanged, this, [this]() {
+        centerOn(m_player.get()); // 跟随角色移动
     });
 
     // 路径运动定时器（每 30ms 更新位置）
@@ -115,7 +116,7 @@ MyGraphicsView::MyGraphicsView(QGraphicsScene *scene, QWidget *parent)
     m_pathTimer.start(30);
 
     // 居中显示人物
-    centerOn(m_player);
+    centerOn(m_player.get());
 
     //初始化生成道具
     generateProps(50);
@@ -138,31 +139,37 @@ void MyGraphicsView::generateProps(int count) {
     PropFactory::setMapRadius(bgSize / 2);
 
     for (int i = 0; i < count; ++i) {
-        Prop* prop = PropFactory::createRandomProp(center);
-        prop->setZValue(5);
-        scene()->addItem(prop);
-
-        connect(prop, &Prop::removeRequested, this, [this](Prop* prop) {
-            scene()->removeItem(prop);
-            delete prop;
-        });
+        std::unique_ptr<Prop> prop = PropFactory::createRandomProp(center);
+        prop->setZValue(10);
+        scene()->addItem(prop.release());
     }
 }
 
+template void Prop::interact<Player>(Player*);
 //碰撞检测函数
 void MyGraphicsView::checkCollision() {
     if (!m_player) return;
 
-    // 获取玩家周围的物品
-    QList<QGraphicsItem*> items = scene()->items(m_player->pos(), Qt::IntersectsItemShape, Qt::DescendingOrder);
+    const qreal pickupRadius = 50.0;
+    QPointF playerPos = m_player->pos();
+
+    // 先获取大致矩形区域内的项
+    QRectF detectArea(
+        playerPos.x() - pickupRadius + 30,
+        playerPos.y() - pickupRadius + 30,
+        pickupRadius * 2,
+        pickupRadius * 2
+        );
+
+    QList<QGraphicsItem*> items = scene()->items(detectArea);
 
     for (QGraphicsItem* item : items) {
         Prop* prop = dynamic_cast<Prop*>(item);
         if (prop) {
             // 计算距离
             qreal distance = QLineF(m_player->pos(), prop->pos()).length();
-            if (distance < 80) {  // 拾取半径
-                prop->interact(m_player);
+            if (distance < 50) {  // 拾取半径
+                prop->interact(m_player.get());
             }
         }
     }
