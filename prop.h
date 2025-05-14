@@ -1,9 +1,16 @@
 #define PROP_H
-#include "character.h"
 #include <QGraphicsPixmapItem>
 #include <QObject>
-
+class Character;
 class Player;
+
+// 道具类型枚举
+enum class PropType {
+    Knife,
+    Hp,
+    Shoes,
+    COUNT
+};
 
 class Prop : public QObject, public QGraphicsPixmapItem {
     Q_OBJECT
@@ -24,6 +31,8 @@ public:
         // 基础交互逻辑
         switch(m_type){
         case PropType::Knife:
+        case PropType::Shoes:
+        case PropType::Hp:
             character->addProp(std::unique_ptr<Prop>(this));
             break;
         default:

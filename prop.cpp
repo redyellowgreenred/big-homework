@@ -1,6 +1,5 @@
 #include "character.h"
 #include "player.h"
-#include "prop.h"
 #include <QPainter>
 
 // 基础道具类实现
@@ -17,6 +16,13 @@ void Prop::loadIcon() {
     switch(m_type) {
     case PropType::Knife:
         m_iconPath = ":/props/knife.png";
+        break;
+    case PropType::Hp:
+        m_iconPath = ":/props/hp.png";
+
+        break;
+    case PropType::Shoes:
+        m_iconPath = ":/props/shoes.png";
 
         break;
     default:

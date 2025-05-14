@@ -1,7 +1,6 @@
 #ifndef PROPFACTORY_H
 #define PROPFACTORY_H
 
-#include "prop.h"
 #include "character.h"
 #include "mygraphicsview.h"
 #include <QPainter>
@@ -12,6 +11,7 @@ class PropFactory{
 private:
     static int mapRadius;
     static QPointF randomPositionNearCenter(const QPointF& center);
+    static PropType selectByWeight();
 
 public:
     static std::unique_ptr<Prop> createRandomProp(const QPointF& centerPos);

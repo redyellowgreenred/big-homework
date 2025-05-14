@@ -1,12 +1,42 @@
 #include "propfactory.h"
 #include <QtMath>  // 用于三角函数（qCos, qSin）
 #include <QRandomGenerator>
+#include <vector>
+#include <random>
+#include <numeric>
 int PropFactory::mapRadius = 0;
 
+PropType PropFactory::selectByWeight() {
+    // 定义道具权重表
+    static const std::vector<std::pair<PropType, int>> propWeights = {
+        {PropType::Knife, 80},
+        {PropType::Hp, 10},
+        {PropType::Shoes, 10}
+    };
+
+    // 计算总权重
+    int totalWeight = 0;
+    for (const auto& [type, weight] : propWeights){
+        totalWeight += weight;
+    }
+
+    // 生成随机数
+    int random = QRandomGenerator::global()->bounded(totalWeight);
+
+    // 轮盘赌选择
+    int cumulative = 0;
+    for (const auto& [type, weight] : propWeights) {
+        cumulative += weight;
+        if (random < cumulative) {
+            return type;
+        }
+    }
+
+    return PropType::Knife; // 默认返回
+}
+
 std::unique_ptr<Prop> PropFactory::createRandomProp(const QPointF& centerPos){
-    PropType type = static_cast<PropType>(
-        QRandomGenerator::global()->bounded(static_cast<int>(PropType::COUNT))
-        );
+    PropType type = selectByWeight();
     //随机生成道具类型
     QPointF pos = randomPositionNearCenter(centerPos);
     //随机生成位置
@@ -15,6 +45,12 @@ std::unique_ptr<Prop> PropFactory::createRandomProp(const QPointF& centerPos){
 
     switch(type){
     case PropType::Knife:
+        prop = std::make_unique<Prop>(type);
+        break;
+    case PropType::Hp:
+        prop = std::make_unique<Prop>(type);
+        break;
+    case PropType::Shoes:
         prop = std::make_unique<Prop>(type);
         break;
     default:

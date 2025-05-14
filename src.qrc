@@ -3,5 +3,7 @@
         <file>figs/capoo.gif</file>
         <file>figs/background.jpg</file>
         <file>props/knife.png</file>
+        <file>props/hp.png</file>
+        <file>props/shoes.png</file>
     </qresource>
 </RCC>

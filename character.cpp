@@ -1,19 +1,20 @@
 #include "character.h"
-#include "prop.h"
+#include "propeffect.h"
 #include <QDebug>
 
 Character::Character(int mapRadius, QGraphicsItem* parent)
     : QObject(nullptr), QGraphicsPixmapItem(parent),
-    p_hp(100), p_maxhp(100), p_moveSpeed(200),mapRadius(mapRadius),
+    p_hp(100), p_maxhp(100),p_originalSpeed(200), p_moveSpeed(200),mapRadius(mapRadius),
     p_state(CharacterState::Idle),
     isMoving(false) {
     setFlag(QGraphicsItem::ItemIsFocusable);
     setFlag(QGraphicsItem::ItemSendsGeometryChanges);
 
-    m_knifeUpdateTimer = new QTimer(this);
     moveAnimation = new QPropertyAnimation(this, "pos", this);
-    connect(m_knifeUpdateTimer, &QTimer::timeout, this, &Character::updateKnivesPosition);
-    m_knifeUpdateTimer->start(15);
+
+    //构建映射
+    m_propEffects[PropType::Knife] = std::make_unique<KnifeEffect>();
+    m_propEffects[PropType::Shoes] = std::make_unique<ShoesEffect>(4000);
 }
 
 Character::~Character() {
@@ -27,6 +28,11 @@ int Character::health() const{
 int Character::maxHealth() const
 {
     return p_maxhp;
+}
+
+int Character::originalSpeed() const
+{
+    return p_originalSpeed;
 }
 
 int Character::moveSpeed() const
@@ -123,7 +129,11 @@ void Character::stopMoving()
 }
 
 void Character::addProp(std::unique_ptr<Prop> prop){
-    m_knives.push_back(std::move(prop));
+    PropType proptype = prop->getType();
+    auto it = m_propEffects.find(proptype);
+    if (it != m_propEffects.end()){
+        it->second->apply(this, std::move(prop));
+    }
 }
 
 void Character::updateKnivesPosition() {

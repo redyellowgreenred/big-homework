@@ -13,6 +13,7 @@ SOURCES += \
     mygraphicsview.cpp \
     player.cpp \
     prop.cpp \
+    propeffect.cpp \
     propfactory.cpp
 
 HEADERS += \
@@ -21,6 +22,7 @@ HEADERS += \
     mygraphicsview.h \
     player.h \
     prop.h \
+    propeffect.h \
     propfactory.h
 
 FORMS += \

@@ -7,12 +7,9 @@
 #include <QTimer>
 #include <QGraphicsScene>
 #include <memory>
+#include "prop.h"
 
-// 道具类型枚举
-enum class PropType {
-    Knife,
-    COUNT
-};
+class PropEffect;
 
 //角色状态枚举
 enum class CharacterState {
@@ -32,11 +29,11 @@ class Character : public QObject, public QGraphicsPixmapItem {
 private:
     //飞刀存储系统
     std::vector<std::unique_ptr<Prop>> m_knives;
-    QTimer* m_knifeUpdateTimer;
     const float m_knifeDistance = 100; // 增大旋转半径
 protected:  // 改为protected以便子类访问
     int p_hp;
     int p_maxhp;
+    int p_originalSpeed;
     int p_moveSpeed;
     int mapRadius;
     CharacterState p_state;
@@ -48,10 +45,12 @@ protected:  // 改为protected以便子类访问
 
 public:
     virtual ~Character();
+    std::unordered_map<PropType, std::unique_ptr<PropEffect>> m_propEffects;
 
     // 通用方法
     int health() const;
     int maxHealth() const;
+    int originalSpeed() const;
     int moveSpeed() const;
     CharacterState state() const;
     bool isAlive() const;
@@ -68,6 +67,7 @@ public:
     void addProp(std::unique_ptr<Prop> prop);
 
     //飞刀系统
+    void addKnife(std::unique_ptr<Prop> prop){m_knives.push_back(std::move(prop));}
     int knifeCount() const { return m_knives.size(); }
     void updateKnivesPosition(); // 更新飞刀位置
 
@@ -82,3 +82,4 @@ protected slots:
 };
 
 #endif // CHARACTER_H
+
