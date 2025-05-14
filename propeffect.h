@@ -36,7 +36,7 @@ class ShoesEffect : public PropEffect {
     Q_OBJECT
 
 public:
-    explicit ShoesEffect(int duration, QObject* parent = nullptr, int speedBoost = 200);
+    explicit ShoesEffect(int duration, QObject* parent = nullptr, int speedBoost = 100);
     void apply(Character* character, std::unique_ptr<Prop>) override;
     void remove(Character* character) override;
 
@@ -44,6 +44,15 @@ private:
     int duration;
     int speedBoost;
     std::unique_ptr<QTimer> updateTimer;
+};
+
+class TreeEffect : public PropEffect {
+    Q_OBJECT
+
+public:
+    explicit TreeEffect(QObject* parent = nullptr);
+    void apply(Character* character, std::unique_ptr<Prop>) override;
+    void remove(Character* character = nullptr) override;
 };
 
 #endif // PROPEFFECT_H

@@ -6,15 +6,20 @@ Character::Character(int mapRadius, QGraphicsItem* parent)
     : QObject(nullptr), QGraphicsPixmapItem(parent),
     p_hp(100), p_maxhp(100),p_originalSpeed(200), p_moveSpeed(200),mapRadius(mapRadius),
     p_state(CharacterState::Idle),
-    isMoving(false) {
+    isMoving(false),
+    p_healthBar(std::make_unique<HealthBar>(this))
+{
     setFlag(QGraphicsItem::ItemIsFocusable);
     setFlag(QGraphicsItem::ItemSendsGeometryChanges);
 
     moveAnimation = new QPropertyAnimation(this, "pos", this);
 
-    //构建映射
+    p_healthBar->loadHealthBarImages(":/props/healthbar/", "png", 10);
+    p_healthBar->setTargetCharacter(this);
+
+    // 构建映射
     m_propEffects[PropType::Knife] = std::make_unique<KnifeEffect>();
-    m_propEffects[PropType::Shoes] = std::make_unique<ShoesEffect>(4000);
+    m_propEffects[PropType::Shoes] = std::make_unique<ShoesEffect>(4400);
 }
 
 Character::~Character() {
@@ -131,7 +136,7 @@ void Character::stopMoving()
 void Character::addProp(std::unique_ptr<Prop> prop){
     PropType proptype = prop->getType();
     auto it = m_propEffects.find(proptype);
-    if (it != m_propEffects.end()){
+    if (it != m_propEffects.end() && prop->getType() != PropType::Tree){
         it->second->apply(this, std::move(prop));
     }
 }
@@ -165,4 +170,10 @@ void Character::updateKnivesPosition() {
             knife->setRotation(angle);  // Update rotation based on new position
         }
     }
+}
+
+void Character::setMyHealthbar(std::unique_ptr<HealthBar> bar)
+{
+    p_healthBar = std::move(bar);
+    p_healthBar->setTargetCharacter(this);
 }

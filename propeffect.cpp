@@ -13,7 +13,7 @@ void KnifeEffect::apply(Character *character, std::unique_ptr<Prop> prop){
         character->updateKnivesPosition();
     });
 
-    updateTimer->start(15); // 启动定时器（移到 lambda 外部）
+    updateTimer->start(10); // 启动定时器（移到 lambda 外部）
 }
 
 
@@ -29,10 +29,11 @@ ShoesEffect::ShoesEffect(int duration,QObject* parent, int speedBoost)
     updateTimer = std::make_unique<QTimer>(this);
 }
 
+
 void ShoesEffect::apply(Character* character, std::unique_ptr<Prop> prop) {
 
     // 提升移动速度
-    character->setMoveSpeed(character->moveSpeed() + speedBoost);
+    character->setMoveSpeed(character->originalSpeed() + speedBoost);
 
     // 断开之前的连接
     disconnect(updateTimer.get(), &QTimer::timeout, nullptr, nullptr);
@@ -53,3 +54,15 @@ void ShoesEffect::remove(Character* character) {
     // 恢复原始速度
     character->setMoveSpeed(character->originalSpeed());
 }
+
+TreeEffect::TreeEffect(QObject* parent)
+    : PropEffect(parent) {
+}
+
+void TreeEffect::apply(Character* character, std::unique_ptr<Prop> /*prop*/) {
+
+}
+
+void TreeEffect::remove(Character* character) {
+}
+

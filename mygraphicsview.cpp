@@ -61,10 +61,11 @@ MyGraphicsView::MyGraphicsView(QGraphicsScene *scene, QWidget *parent)
 
     // 加载并处理圆形背景
     // ":/" 表示从 qrc 加载资源
-    QPixmap backgroundPixmap(":/figs/background.jpg");
+    QPixmap backgroundPixmap(":/figs/background3.png");
     if (backgroundPixmap.isNull()) {
-        // 时常使用 qDebug 输出调试信息, 是好的开发习惯
         qDebug() << "Failed to load background image!";
+    } else {
+        qDebug() << "Background image loaded successfully!";
     }
 
     const int bgSize = 3600;  // 圆形背景的直径
@@ -101,25 +102,37 @@ MyGraphicsView::MyGraphicsView(QGraphicsScene *scene, QWidget *parent)
     m_player->setHealth(100);
     m_player->loadAnimation(":/figs/capoo.gif");
 
-    qreal scaleFactor = 0.5;
+    qreal scaleFactor = 0.3;
     m_player->setScale(scaleFactor);
 
     connect(m_player.get(), &Player::positionChanged, this, [this]() {
         centerOn(m_player.get()); // 跟随角色移动
     });
 
+    m_healthBar = std::make_unique<HealthBar>();
+    m_healthBar->loadHealthBarImages(":/props/healthbar/", "png", 10);
+    HealthBar* healthBarPtr = m_healthBar.get();
+    scene->addItem(m_healthBar.get());  // 必须添加到场景！
+    m_player->setMyHealthbar(std::move(m_healthBar));
+
     // 路径运动定时器（每 30ms 更新位置）
     connect(&m_pathTimer, &QTimer::timeout, this,
             &MyGraphicsView::updateCirclePath);
     connect(&m_pathTimer, &QTimer::timeout, this,
             &MyGraphicsView::checkCollision);
-    m_pathTimer.start(30);
+    QMetaObject::Connection conn = connect(&m_pathTimer, &QTimer::timeout, healthBarPtr, &HealthBar::updateHealthBar);
+    if (conn) {
+        qDebug() << "Signal and slot connected successfully";
+    } else {
+        qDebug() << "Failed to connect signal and slot";
+    }
+    m_pathTimer.start(20);
 
     // 居中显示人物
     centerOn(m_player.get());
 
     //初始化生成道具
-    generateProps(50);
+    generateProps(100);
 }
 
 void MyGraphicsView::keyPressEvent(QKeyEvent *event) {
@@ -150,13 +163,13 @@ template void Prop::interact<Player>(Player*);
 void MyGraphicsView::checkCollision() {
     if (!m_player) return;
 
-    const qreal pickupRadius = 50.0;
+    const qreal pickupRadius = 4.0;
     QPointF playerPos = m_player->pos();
 
     // 先获取大致矩形区域内的项
     QRectF detectArea(
-        playerPos.x() - pickupRadius + 30,
-        playerPos.y() - pickupRadius + 30,
+        playerPos.x() - pickupRadius + 2,
+        playerPos.y() - pickupRadius + 2,
         pickupRadius * 2,
         pickupRadius * 2
         );

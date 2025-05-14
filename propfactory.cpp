@@ -10,8 +10,9 @@ PropType PropFactory::selectByWeight() {
     // 定义道具权重表
     static const std::vector<std::pair<PropType, int>> propWeights = {
         {PropType::Knife, 80},
-        {PropType::Hp, 10},
-        {PropType::Shoes, 10}
+        {PropType::Hp, 5},
+        {PropType::Shoes, 10},
+        {PropType::Tree, 5}
     };
 
     // 计算总权重
@@ -42,20 +43,20 @@ std::unique_ptr<Prop> PropFactory::createRandomProp(const QPointF& centerPos){
     //随机生成位置
     std::unique_ptr<Prop> prop = nullptr;
     //初始化道具
-
-    switch(type){
-    case PropType::Knife:
-        prop = std::make_unique<Prop>(type);
-        break;
-    case PropType::Hp:
-        prop = std::make_unique<Prop>(type);
-        break;
-    case PropType::Shoes:
-        prop = std::make_unique<Prop>(type);
-        break;
-    default:
-        break;
-    }
+    prop = std::make_unique<Prop>(type);
+    // switch(type){
+    // case PropType::Knife:
+    //     prop = std::make_unique<Prop>(type);
+    //     break;
+    // case PropType::Hp:
+    //     prop = std::make_unique<Prop>(type);
+    //     break;
+    // case PropType::Shoes:
+    //     prop = std::make_unique<Prop>(type);
+    //     break;
+    // default:
+    //     break;
+    // }
     //创建具体道具
 
     prop->setPos(pos);

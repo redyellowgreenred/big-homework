@@ -20,6 +20,7 @@ private:
     const int SQUARE_SIZE = 500;  // 运动轨迹正方形边长
     int currentEdge = 0;          // 当前所在轨迹边（0-3）
     QPointF initPoint;
+    std::unique_ptr<HealthBar> m_healthBar;
 
 public slots:
     // 处理信号, 展示游戏窗口

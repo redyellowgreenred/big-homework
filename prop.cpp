@@ -9,6 +9,9 @@ Prop::Prop(PropType type, QGraphicsItem* parent)
     setFlag(QGraphicsItem::ItemIgnoresTransformations);
 
     loadIcon();
+    if (m_type == PropType::Tree) {
+        setScale(3.0); // 放大2倍
+    }
 }
 
 void Prop::loadIcon() {
@@ -24,6 +27,9 @@ void Prop::loadIcon() {
     case PropType::Shoes:
         m_iconPath = ":/props/shoes.png";
 
+        break;
+    case PropType::Tree:
+        m_iconPath = ":/props/tree.png";
         break;
     default:
         break;

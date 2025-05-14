@@ -8,6 +8,7 @@
 #include <QGraphicsScene>
 #include <memory>
 #include "prop.h"
+#include "healthbar.h"
 
 class PropEffect;
 
@@ -29,7 +30,11 @@ class Character : public QObject, public QGraphicsPixmapItem {
 private:
     //飞刀存储系统
     std::vector<std::unique_ptr<Prop>> m_knives;
-    const float m_knifeDistance = 100; // 增大旋转半径
+    const float m_knifeDistance = 60; // 增大旋转半径
+
+    //血条
+    std::unique_ptr<HealthBar> p_healthBar;
+
 protected:  // 改为protected以便子类访问
     int p_hp;
     int p_maxhp;
@@ -71,6 +76,8 @@ public:
     int knifeCount() const { return m_knives.size(); }
     void updateKnivesPosition(); // 更新飞刀位置
 
+    //血条系统
+    void setMyHealthbar(std::unique_ptr<HealthBar> bar);
 signals:
     void healthChanged(int newHealth);
     void positionChanged(QPointF newPos);

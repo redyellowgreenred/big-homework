@@ -8,6 +8,7 @@ CONFIG += c++17
 
 SOURCES += \
     character.cpp \
+    healthbar.cpp \
     main.cpp \
     mainwindow.cpp \
     mygraphicsview.cpp \
@@ -18,6 +19,7 @@ SOURCES += \
 
 HEADERS += \
     character.h \
+    healthbar.h \
     mainwindow.h \
     mygraphicsview.h \
     player.h \

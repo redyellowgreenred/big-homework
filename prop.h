@@ -4,11 +4,13 @@
 class Character;
 class Player;
 
+
 // 道具类型枚举
 enum class PropType {
     Knife,
     Hp,
     Shoes,
+    Tree,
     COUNT
 };
 

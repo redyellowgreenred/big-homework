@@ -1,9 +1,22 @@
 <RCC>
     <qresource prefix="/">
         <file>figs/capoo.gif</file>
-        <file>figs/background.jpg</file>
         <file>props/knife.png</file>
         <file>props/hp.png</file>
         <file>props/shoes.png</file>
+        <file>props/healthbar/0.png</file>
+        <file>props/healthbar/1.png</file>
+        <file>props/healthbar/2.png</file>
+        <file>props/healthbar/3.png</file>
+        <file>props/healthbar/4.png</file>
+        <file>props/healthbar/5.png</file>
+        <file>props/healthbar/6.png</file>
+        <file>props/healthbar/7.png</file>
+        <file>props/healthbar/8.png</file>
+        <file>props/healthbar/9.png</file>
+        <file>figs/background.jpg</file>
+        <file>figs/background2.png</file>
+        <file>figs/background3.png</file>
+        <file>props/tree.png</file>
     </qresource>
 </RCC>
