@@ -66,3 +66,17 @@ void TreeEffect::apply(Character* character, std::unique_ptr<Prop> /*prop*/) {
 void TreeEffect::remove(Character* character) {
 }
 
+HpEffect::HpEffect(QObject* parent) : PropEffect(parent) {}
+
+void HpEffect::apply(Character* character, std::unique_ptr<Prop> prop) {
+    // 直接增加生命值（最多不超过最大生命值）
+    int currentHp = character->health();
+    int newHp = qMin(currentHp + 10, character->maxHealth()); // 限制不超过最大值
+    character->setHealth(newHp);
+
+}
+
+void HpEffect::remove(Character* character) {
+    // 生命值加成无需移除，留空或注释
+    // 若有持续性效果（如缓慢回血），可在此处理，当前需求无需操作
+}

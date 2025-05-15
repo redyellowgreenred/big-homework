@@ -1,34 +1,49 @@
 #include <QApplication>
-
 #include "mainwindow.h"
 #include "mygraphicsview.h"
+#include <QEventLoop>
 
 int main(int argc, char *argv[]) {
-    qSetMessagePattern("%{file}(%{line}): %{message}"); // 可选：格式化输出
-
+    qSetMessagePattern("%{file}(%{line}): %{message}");
     QApplication app(argc, argv);
+    bool restartGame = true;
 
-    // 初始化游戏场景
-    QGraphicsScene scene;
-    MyGraphicsView view(&scene);
-    view.resize(1080, 675);
-    // 关闭滚动条
-    view.setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
-    view.setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    while (restartGame) {
+        // 创建新场景和视图
+        QGraphicsScene* scene = new QGraphicsScene();
+        MyGraphicsView* view = new MyGraphicsView(scene);
+        view->resize(1080, 675);
+        view->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+        view->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
 
-    // 创建开始界面
-    MainWindow mw;
+        // 创建开始界面
+        MainWindow* mainWindow = new MainWindow();
 
-    // 连接信号到成员函数
-    // 对应步骤(3)
-    // 在 main 函数中, 调用 connect 需要加上 QObject::
-    // 但是在某些类的成员函数中调用 connect 却并不需要, 为什么?
-    QObject::connect(&mw, &MainWindow::evokeGameSignal, &view,
-                     &MyGraphicsView::handleEvokeGameSignal);
+        // 连接开始游戏信号
+        QObject::connect(mainWindow, &MainWindow::evokeGameSignal, view,
+                         &MyGraphicsView::handleEvokeGameSignal);
 
-    // 展示开始界面
-    mw.show();
+        // 连接游戏结束信号（关键修改：使用局部事件循环）
+        QEventLoop loop; // 创建局部事件循环
+        QObject::connect(view, &MyGraphicsView::gameOver, [&](bool restart) {
+            restartGame = restart;
+            loop.quit(); // 退出局部事件循环
+        });
+        QObject::connect(mainWindow, &MainWindow::close, [&]() {
+            loop.quit(); // 主窗口关闭时也退出循环
+        });
 
-    // 运行应用, 并以应用的返回值作为整个程序的返回值
-    return app.exec();
+        // 显示开始界面并启动局部事件循环
+        mainWindow->show();
+        loop.exec(); // 阻塞在此，直到 gameOver 或窗口关闭
+
+        // 清理资源（确保在事件循环退出后执行）
+        delete view;
+        delete scene;
+        delete mainWindow;
+
+        qDebug() << "游戏重启中...";
+    }
+
+    return 0;
 }

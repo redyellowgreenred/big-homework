@@ -8,7 +8,9 @@
 #include <QMovie>
 #include <QPainter>
 #include <QTimer>
+#include <QMessageBox>
 
+const int bgSize = 3600;
 // 槽函数: 处理信号, 展示游戏窗口
 void MyGraphicsView::handleEvokeGameSignal() {
     this->show();
@@ -109,18 +111,19 @@ MyGraphicsView::MyGraphicsView(QGraphicsScene *scene, QWidget *parent)
         centerOn(m_player.get()); // 跟随角色移动
     });
 
-    m_healthBar = std::make_unique<HealthBar>();
-    m_healthBar->loadHealthBarImages(":/props/healthbar/", "png", 10);
-    HealthBar* healthBarPtr = m_healthBar.get();
-    scene->addItem(m_healthBar.get());  // 必须添加到场景！
-    m_player->setMyHealthbar(std::move(m_healthBar));
+    HealthBar* m_healthBar = new HealthBar();
+    m_healthBar->loadHealthBarImages(":/props/healthbar/", "png", 11);
+    m_healthBar->setTargetCharacter(m_player.get());
+    scene->addItem(m_healthBar);  // 必须添加到场景！
 
+    //角色死亡事件绑定
+    connect(m_player.get(), &Player::died, this, &MyGraphicsView::onPlayerDeath);
     // 路径运动定时器（每 30ms 更新位置）
     connect(&m_pathTimer, &QTimer::timeout, this,
             &MyGraphicsView::updateCirclePath);
     connect(&m_pathTimer, &QTimer::timeout, this,
             &MyGraphicsView::checkCollision);
-    QMetaObject::Connection conn = connect(&m_pathTimer, &QTimer::timeout, healthBarPtr, &HealthBar::updateHealthBar);
+    QMetaObject::Connection conn = connect(&m_pathTimer, &QTimer::timeout, m_healthBar, &HealthBar::updateHealthBar);
     if (conn) {
         qDebug() << "Signal and slot connected successfully";
     } else {
@@ -133,6 +136,7 @@ MyGraphicsView::MyGraphicsView(QGraphicsScene *scene, QWidget *parent)
 
     //初始化生成道具
     generateProps(100);
+    //生成ai
 }
 
 void MyGraphicsView::keyPressEvent(QKeyEvent *event) {
@@ -148,7 +152,6 @@ void MyGraphicsView::keyReleaseEvent(QKeyEvent *event) {
 //初始化道具生成
 void MyGraphicsView::generateProps(int count) {
     QPointF center = m_background->boundingRect().center();
-    const int bgSize = 3600;
     PropFactory::setMapRadius(bgSize / 2);
 
     for (int i = 0; i < count; ++i) {
@@ -163,13 +166,13 @@ template void Prop::interact<Player>(Player*);
 void MyGraphicsView::checkCollision() {
     if (!m_player) return;
 
-    const qreal pickupRadius = 4.0;
+    const qreal pickupRadius = 2.0;
     QPointF playerPos = m_player->pos();
 
     // 先获取大致矩形区域内的项
     QRectF detectArea(
-        playerPos.x() - pickupRadius + 2,
-        playerPos.y() - pickupRadius + 2,
+        playerPos.x() - pickupRadius + 1,
+        playerPos.y() - pickupRadius + 1,
         pickupRadius * 2,
         pickupRadius * 2
         );
@@ -186,4 +189,16 @@ void MyGraphicsView::checkCollision() {
             }
         }
     }
+}
+
+void MyGraphicsView::onPlayerDeath() {
+    m_pathTimer.stop();
+    m_player->setEnabled(false);
+
+    QMessageBox::StandardButton reply = QMessageBox::question(
+        this, "游戏结束", "你已死亡！是否重新开始？",
+        QMessageBox::Yes | QMessageBox::No
+        );
+
+    emit gameOver(reply == QMessageBox::Yes); // 发出游戏结束信号
 }

@@ -32,7 +32,7 @@ bool HealthBar::loadHealthBarImages(const QString& pathPrefix, const QString& fi
     m_healthBarImages.clear();
 
     for (int i = 0; i < count; ++i) {
-        QString filePath = QString("%1%2.%3").arg(pathPrefix).arg(i).arg(fileExtension);
+        QString filePath = QString("%1%2.%3").arg(pathPrefix).arg(i-1).arg(fileExtension);
         QPixmap pixmap(filePath);
 
         m_healthBarImages.append(pixmap);
@@ -83,13 +83,11 @@ void HealthBar::updateHealthBar()
     // 更新图片
     if (imageIndex >= 0 && imageIndex < m_healthBarImages.size()) {
         setPixmap(m_healthBarImages[imageIndex]);
-        qDebug() << "Updated pixmap for HealthBar with index:" << imageIndex; // 添加调试语句
     }
 
     // 更新位置，跟随角色
     if (m_targetCharacter) {
         setPos(m_targetCharacter->pos() + m_offset);
-        qDebug() << "Updated position of HealthBar to follow character"; // 添加调试语句
     }
 }
 

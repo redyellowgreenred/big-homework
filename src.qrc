@@ -18,5 +18,7 @@
         <file>figs/background2.png</file>
         <file>figs/background3.png</file>
         <file>props/tree.png</file>
+        <file>props/healthbar/-1.png</file>
+        <file>figs/dead.png</file>
     </qresource>
 </RCC>

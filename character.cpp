@@ -7,19 +7,21 @@ Character::Character(int mapRadius, QGraphicsItem* parent)
     p_hp(100), p_maxhp(100),p_originalSpeed(200), p_moveSpeed(200),mapRadius(mapRadius),
     p_state(CharacterState::Idle),
     isMoving(false),
-    p_healthBar(std::make_unique<HealthBar>(this))
+    p_healthBar(new HealthBar(this)),
+    q_movie(nullptr),
+    isAnimationLoaded(false),m_isDead(false)
 {
     setFlag(QGraphicsItem::ItemIsFocusable);
     setFlag(QGraphicsItem::ItemSendsGeometryChanges);
 
     moveAnimation = new QPropertyAnimation(this, "pos", this);
 
-    p_healthBar->loadHealthBarImages(":/props/healthbar/", "png", 10);
-    p_healthBar->setTargetCharacter(this);
-
     // 构建映射
     m_propEffects[PropType::Knife] = std::make_unique<KnifeEffect>();
     m_propEffects[PropType::Shoes] = std::make_unique<ShoesEffect>(4400);
+    m_propEffects[PropType::Hp] = std::make_unique<HpEffect>();
+
+    loadDeadImage(":/figs/dead.png");
 }
 
 Character::~Character() {
@@ -64,8 +66,7 @@ void Character::setHealth(int health)
 
     if (p_hp <= 0) {
         p_hp = 0;
-        setState(CharacterState::Dead);
-        emit died();
+        die();
     }
 }
 
@@ -167,13 +168,76 @@ void Character::updateKnivesPosition() {
         // Only update if position has changed (optional optimization)
         if (knife->pos() != QPointF(x, y)) {
             knife->setPos(x, y);
-            knife->setRotation(angle);  // Update rotation based on new position
+            knife->setRotation(angle + 180 + 90);  // Update rotation based on new position
         }
     }
 }
 
-void Character::setMyHealthbar(std::unique_ptr<HealthBar> bar)
+void Character::setMyHealthbar(HealthBar* bar)
 {
-    p_healthBar = std::move(bar);
-    p_healthBar->setTargetCharacter(this);
+    p_healthBar = bar;
+    if (p_healthBar) {
+        p_healthBar->setTargetCharacter(this);
+    }
+}
+
+void Character::loadAnimation(const QString& gifPath) {
+    if (q_movie) {
+        q_movie->stop();
+        delete q_movie;
+    }
+
+    q_movie = new QMovie(gifPath, QByteArray(), this);
+    if (q_movie->isValid()) {
+        q_movie->setCacheMode(QMovie::CacheAll);
+        q_movie->start();
+        setPixmap(q_movie->currentPixmap());
+        setOffset(-q_movie->currentPixmap().width()/4,
+                  -q_movie->currentPixmap().height()/4);
+        isAnimationLoaded = true;
+    } else {
+        qDebug() << "Failed to load animation:" << gifPath;
+        QPixmap defaultPixmap(16, 16);
+        QPainter painter(&defaultPixmap);
+        painter.fillRect(defaultPixmap.rect(), Qt::red);
+        setPixmap(defaultPixmap);
+    }
+}
+
+void Character::loadDeadImage(const QString& imagePath) {
+    m_deadPixmap = QPixmap(imagePath);
+    if (m_deadPixmap.isNull()) {
+        qDebug() << "Failed to load dead image:" << imagePath;
+    } else {
+        // 调整图片锚点（可选，根据图片尺寸设置）
+        setOffset(-m_deadPixmap.width()/2, -m_deadPixmap.height()/2);
+    }
+}
+void Character::die() {
+    if (m_isDead) return; // 防止重复调用
+    m_isDead = true;
+
+    // 停止动画
+    if (q_movie) {
+        q_movie->stop();
+        delete q_movie;
+        q_movie = nullptr;
+    }
+    stopMoving();
+    p_state = CharacterState::Dead;
+
+    // 显示死亡图片
+    if (!m_deadPixmap.isNull()) {
+        setPixmap(m_deadPixmap);
+    } else {
+        //  fallback：显示红色方块（调试用）
+        QPixmap defaultPixmap(32, 32);
+        defaultPixmap.fill(Qt::red);
+        setPixmap(defaultPixmap);
+    }
+
+    // 触发死亡信号
+    emit died();
+
+    setState(CharacterState::Dead);
 }

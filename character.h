@@ -1,6 +1,10 @@
 #ifndef CHARACTER_H
 #define CHARACTER_H
 
+#include <QMovie>
+#include <QSet>
+#include <QPainter>
+#include <QVector2D>
 #include <QObject>
 #include <QGraphicsPixmapItem>
 #include <QPropertyAnimation>
@@ -32,10 +36,15 @@ private:
     std::vector<std::unique_ptr<Prop>> m_knives;
     const float m_knifeDistance = 60; // 增大旋转半径
 
-    //血条
-    std::unique_ptr<HealthBar> p_healthBar;
+    //血条（改为普通指针）
+    HealthBar* p_healthBar = nullptr;  // 普通指针
+
+    QPixmap m_deadPixmap;       // 死亡静态图片
+    bool m_isDead = false;
 
 protected:  // 改为protected以便子类访问
+    QMovie* q_movie;
+    bool isAnimationLoaded;
     int p_hp;
     int p_maxhp;
     int p_originalSpeed;
@@ -67,17 +76,24 @@ public:
     void setPos(const QPointF& pos);
     virtual void moveTo(const QPointF& pos);
     virtual void stopMoving();
+    void loadAnimation(const QString& gifPath);
+
+    HealthBar* getHealthBar() { return p_healthBar; }
+
+    void die();
+    void loadDeadImage(const QString& imagePath); // 加载死亡图片
+    void setDeadState(bool isDead);               // 设置死亡状态
 
     //道具系统
     void addProp(std::unique_ptr<Prop> prop);
 
     //飞刀系统
-    void addKnife(std::unique_ptr<Prop> prop){m_knives.push_back(std::move(prop));}
+    void addKnife(std::unique_ptr<Prop> prop) { m_knives.push_back(std::move(prop)); }
     int knifeCount() const { return m_knives.size(); }
     void updateKnivesPosition(); // 更新飞刀位置
 
     //血条系统
-    void setMyHealthbar(std::unique_ptr<HealthBar> bar);
+    void setMyHealthbar(HealthBar* bar);  // 改为接收普通指针
 signals:
     void healthChanged(int newHealth);
     void positionChanged(QPointF newPos);
@@ -89,4 +105,3 @@ protected slots:
 };
 
 #endif // CHARACTER_H
-

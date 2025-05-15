@@ -57,3 +57,12 @@ public:
 
 #endif // PROPEFFECT_H
 
+
+class HpEffect : public PropEffect {
+    Q_OBJECT
+
+public:
+    explicit HpEffect(QObject* parent = nullptr);
+    void apply(Character* character, std::unique_ptr<Prop>) override;
+    void remove(Character* character) override;
+};
