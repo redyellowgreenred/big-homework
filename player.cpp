@@ -39,7 +39,7 @@ void Player::onMovementTimeout() {
     const int speed = p_moveSpeed / 62.5;
 
     QPointF currentPos = pos();
-    QPointF centerPoint = QPointF(mapRadius, mapRadius-100); // 假设圆心在 (mapRadius, mapRadius)
+    QPointF centerPoint = QPointF(mapRadius, mapRadius); // 假设圆心在 (mapRadius, mapRadius)
     QLineF lineToCenter(currentPos, centerPoint);
     qreal distanceToCenter = lineToCenter.length();
 
@@ -48,7 +48,7 @@ void Player::onMovementTimeout() {
     bool canMoveLeft = true;
     bool canMoveRight = true;
 
-    if (distanceToCenter + speed >= mapRadius) {
+    if (distanceToCenter + speed >= mapRadius - 50) {
         if (currentPos.y() < centerPoint.y()) {
             canMoveDown = false;
         }if (currentPos.y() > centerPoint.y()){

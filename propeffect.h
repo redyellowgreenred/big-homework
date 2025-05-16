@@ -41,9 +41,14 @@ public:
     void remove(Character* character) override;
 
 private:
+    bool isActive = false;
     int duration;
     int speedBoost;
     std::unique_ptr<QTimer> updateTimer;
+
+    QGraphicsPixmapItem* m_icon = nullptr;
+    QTimer m_positionTimer;               // 位置更新定时器
+    void updateIconPosition(Character* character);
 };
 
 class TreeEffect : public PropEffect {
@@ -52,7 +57,7 @@ class TreeEffect : public PropEffect {
 public:
     explicit TreeEffect(QObject* parent = nullptr);
     void apply(Character* character, std::unique_ptr<Prop>) override;
-    void remove(Character* character = nullptr) override;
+    void remove(Character* character) override;
 };
 
 #endif // PROPEFFECT_H

@@ -44,6 +44,7 @@ int main(int argc, char *argv[]) {
 
         qDebug() << "游戏重启中...";
     }
-
+    qDebug() << "游戏退出中...";
+    exit(0);
     return 0;
 }

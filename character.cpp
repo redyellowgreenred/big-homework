@@ -178,8 +178,8 @@ void Character::updateKnivesPosition() {
         double radian = qDegreesToRadians(angle);
 
         // Calculate new position for the knife
-        double x = charPos.x() + m_knifeDistance * qCos(radian) + 30.0;
-        double y = charPos.y() + m_knifeDistance * qSin(radian) + 30.0;
+        double x = charPos.x() + m_knifeDistance * qCos(radian)*(0.8 + count * 0.1) + 30;
+        double y = charPos.y() + m_knifeDistance * qSin(radian)*(0.8 + count * 0.1) + 30;
 
         // Only update if position has changed (optional optimization)
         if (knife->pos() != QPointF(x, y)) {
