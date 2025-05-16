@@ -11,6 +11,7 @@ Character::Character(int mapRadius, QGraphicsItem* parent)
     q_movie(nullptr),
     isAnimationLoaded(false),m_isDead(false)
 {
+
     setFlag(QGraphicsItem::ItemIsFocusable);
     setFlag(QGraphicsItem::ItemSendsGeometryChanges);
 
@@ -22,6 +23,21 @@ Character::Character(int mapRadius, QGraphicsItem* parent)
     m_propEffects[PropType::Hp] = std::make_unique<HpEffect>();
 
     loadDeadImage(":/figs/dead.png");
+
+    QTimer::singleShot(0, this, [this]() {
+        if (!scene()) {
+            qDebug() << "[ERROR] Scene is null, cannot add knives!";
+            return;
+        }
+        for (int i = 0; i < 4; ++i) {
+            auto knife = std::make_unique<Prop>(PropType::Knife);
+            knife->setZValue(10);
+            scene()->addItem(knife.get());
+            addProp(std::move(knife));
+            qDebug() << "Knife" << i << "added to scene at pos:" << m_knives.back()->pos();
+        }
+        updateKnivesPosition(); // 立即更新位置
+    });
 }
 
 Character::~Character() {
