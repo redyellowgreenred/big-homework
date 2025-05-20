@@ -16,7 +16,8 @@ SOURCES += \
     player.cpp \
     prop.cpp \
     propeffect.cpp \
-    propfactory.cpp
+    propfactory.cpp \
+    selectionline.cpp
 
 HEADERS += \
     aicharacter.h \
@@ -27,7 +28,8 @@ HEADERS += \
     player.h \
     prop.h \
     propeffect.h \
-    propfactory.h
+    propfactory.h \
+    selectionline.h
 
 FORMS += \
     mainwindow.ui

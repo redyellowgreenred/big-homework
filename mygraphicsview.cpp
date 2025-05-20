@@ -104,6 +104,13 @@ MyGraphicsView::MyGraphicsView(QGraphicsScene *scene, QWidget *parent)
     m_player->setHealth(100);
     m_player->loadAnimation(":/figs/capoo.gif");
 
+    //加载索敌线
+    m_line = std::make_unique<SelectionLine>();
+    m_line->setPlayer(m_player.get());
+    scene->addItem(m_line.get());
+    connect(&m_lineUpdateTimer, &QTimer::timeout, m_line.get(), &SelectionLine::animate);
+    m_lineUpdateTimer.start(10);
+
     qreal scaleFactor = 0.3;
     m_player->setScale(scaleFactor);
 
@@ -111,10 +118,9 @@ MyGraphicsView::MyGraphicsView(QGraphicsScene *scene, QWidget *parent)
         centerOn(m_player.get()); // 跟随角色移动
     });
 
-    HealthBar* m_healthBar = new HealthBar();
+    std::unique_ptr m_healthBar = std::make_unique<HealthBar>();
     m_healthBar->loadHealthBarImages(":/props/healthbar/", "png", 11);
     m_healthBar->setTargetCharacter(m_player.get());
-    scene->addItem(m_healthBar);  // 必须添加到场景！
 
     //角色死亡事件绑定
     connect(m_player.get(), &Player::died, this, &MyGraphicsView::onPlayerDeath);
@@ -122,14 +128,21 @@ MyGraphicsView::MyGraphicsView(QGraphicsScene *scene, QWidget *parent)
     connect(&m_pathTimer, &QTimer::timeout, this,
             &MyGraphicsView::updateCirclePath);
     connect(&m_pathTimer, &QTimer::timeout, this,
-            &MyGraphicsView::checkCollision);
-    QMetaObject::Connection conn = connect(&m_pathTimer, &QTimer::timeout, m_healthBar, &HealthBar::updateHealthBar);
+            &MyGraphicsView::checkCollision1);
+    connect(&m_pathTimer2, &QTimer::timeout, this,
+            &MyGraphicsView::checkCollision2);
+    QMetaObject::Connection conn = connect(&m_healthbarTimer, &QTimer::timeout, m_healthBar.get(), &HealthBar::updateHealthBar);
     if (conn) {
         qDebug() << "Signal and slot connected successfully";
     } else {
         qDebug() << "Failed to connect signal and slot";
     }
-    m_pathTimer.start(20);
+    m_pathTimer.start(40);
+    m_pathTimer2.start(400);
+    m_healthbarTimer.start(60);
+
+    scene->addItem(m_healthBar.get());  // 必须添加到场景！
+    healthBars.push_back(std::move(m_healthBar));
 
     // 居中显示人物
     centerOn(m_player.get());
@@ -148,7 +161,15 @@ MyGraphicsView::MyGraphicsView(QGraphicsScene *scene, QWidget *parent)
             ));
         ai->startAI(); // 启动AI行为
         scene->addItem(ai.get());
+        //给ai血条
+        std::unique_ptr m_healthBar = std::make_unique<HealthBar>();
+        m_healthBar->loadHealthBarImages(":/props/healthbar/", "png", 11);
+        m_healthBar->setTargetCharacter(ai.get());
+        scene->addItem(m_healthBar.get());
+        m_healthBar->setZValue(10);
+        QMetaObject::Connection conn = connect(&m_healthbarTimer, &QTimer::timeout, m_healthBar.get(), &HealthBar::updateHealthBar);
         m_aiCharacters.push_back(std::move(ai));
+        healthBars.push_back(std::move(m_healthBar));
     }
 }
 
@@ -176,19 +197,57 @@ void MyGraphicsView::generateProps(int count) {
 
 template void Prop::interact<Character>(Character*);
 //碰撞检测函数
-void MyGraphicsView::checkCollision() {
+void MyGraphicsView::checkCollision1() {
     // 1. 检测玩家与道具的碰撞
-    checkCharacterCollision(m_player.get());
+    checkPropCollision(m_player.get());
 
     // 2. 检测每个AI与道具的碰撞
     for (auto& ai : m_aiCharacters) {
         if (ai && ai->isAlive()) {
-            checkCharacterCollision(ai.get());
+            checkPropCollision(ai.get());
         }
     }
 }
 
-void MyGraphicsView::checkCharacterCollision(Character* character) {
+void MyGraphicsView::checkCollision2() {
+    for (size_t i = 0; i < m_aiCharacters.size(); ++i){
+        checkCharacterCollision(m_player.get(), m_aiCharacters[i].get());
+    }
+
+    // 检测 AI 和 AI 之间的碰撞
+    for (size_t i = 0; i < m_aiCharacters.size(); ++i) {
+        for (size_t j = i + 1; j < m_aiCharacters.size(); ++j) {
+            checkCharacterCollision(m_aiCharacters[i].get(), m_aiCharacters[j].get());
+        }
+    }
+}
+
+void MyGraphicsView::checkCharacterCollision(Character* character1, Character* character2){
+    if (!character1 || !character1->isAlive() || !character2 || !character2->isAlive()) return;
+
+    QPointF pos1 = character1->pos();
+    QPointF pos2 = character2->pos();
+
+    qreal distance = QLineF(pos1, pos2).length();
+    const qreal collisionRadius = (character1->getDistance() + character2->getDistance()) * 3 + 100; // 碰撞半径
+
+    if (distance < collisionRadius) {
+        // 处理碰撞逻辑
+        if (character1->knifeCount() && character2->knifeCount()){
+            character1->deleteKnife();
+            character2->deleteKnife();
+            qDebug() << "Collision detected between" << static_cast<QObject*>(character1) << "and" << static_cast<QObject*>(character2);
+        }
+        else if (character1->knifeCount() && !character2->knifeCount()){
+            character2->setHealth(character2->health()-10);
+        }
+        else if (!character1->knifeCount() && character2->knifeCount()){
+            character1->setHealth(character1->health()-10);
+        }
+    }
+}
+
+void MyGraphicsView::checkPropCollision(Character* character) {
     if (!character || !character->isAlive()) return;
 
     const qreal pickupRadius = 50.0; // 拾取半径
@@ -205,7 +264,13 @@ void MyGraphicsView::checkCharacterCollision(Character* character) {
     QList<QGraphicsItem*> items = scene()->items(detectArea);
 
     for (QGraphicsItem* item : items) {
-        Prop* prop = dynamic_cast<Prop*>(item);
+        // 排除玩家角色本身
+        if (item == character || item->type() == HealthBar::Type) {
+            continue;
+        }
+
+        // 检查是否为道具
+        Prop* prop = qgraphicsitem_cast<Prop*>(item);
         if (prop && !prop->isPicked()) {
             qreal distance = QLineF(charPos, prop->pos()).length();
             if (distance < pickupRadius) {

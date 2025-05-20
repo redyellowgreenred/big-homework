@@ -10,8 +10,7 @@ AICharacter::AICharacter(int mapRadius, QGraphicsItem *parent)
     m_aiTimerId(-1),
     m_targetPlayer(nullptr),
     m_playerInSight(false),
-    m_detectionRadius(300.0),
-    m_moveSpeed(5.0) // 设置移动速度
+    m_detectionRadius(300.0)
 {
     int interval = QRandomGenerator::global()->bounded(1000, 3000);
     m_decisionTimer.setInterval(interval);
@@ -106,15 +105,13 @@ void AICharacter::moveRandomly()
 
     // 确保目标在场景内
     QRectF sceneRect = scene()->sceneRect();
-    m_currentTarget.setX(qBound(sceneRect.left() + 50, m_currentTarget.x(), sceneRect.right() - 50));
-    m_currentTarget.setY(qBound(sceneRect.top() + 50, m_currentTarget.y(), sceneRect.bottom() - 50));
-
-    m_isMoving = true;
+    m_currentTarget.setX(qBound(sceneRect.left() + 60, m_currentTarget.x(), sceneRect.right() - 50));
+    m_currentTarget.setY(qBound(sceneRect.top() + 60, m_currentTarget.y(), sceneRect.bottom() - 50));
 }
 
 void AICharacter::updateMovement()
 {
-    if (!m_isMoving || !isAlive()) return;
+    if (!isAlive()) return;
 
     QPointF direction = m_currentTarget - pos();
     qreal distance = std::sqrt(QPointF::dotProduct(direction, direction));
@@ -127,7 +124,7 @@ void AICharacter::updateMovement()
 
     // 标准化方向并移动
     direction /= distance;
-    QPointF newPos = pos() + direction * m_moveSpeed;
+    QPointF newPos = pos() + direction * p_moveSpeed * 0.05;
     setPos(newPos);
 
     // 更新动画

@@ -38,8 +38,6 @@ private:
     bool m_playerInSight;
     qreal m_detectionRadius;
 
-    qreal m_moveSpeed;
-    bool m_isMoving;
 };
 
 #endif // AICHARACTER_H

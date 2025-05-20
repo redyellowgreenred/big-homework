@@ -11,6 +11,10 @@ class HealthBar : public QObject, public QGraphicsPixmapItem {
     Q_PROPERTY(QPointF pos READ pos WRITE setPos)
 
 public:
+    bool isPicked() const {return true;}
+    enum { Type = UserType + 1 };
+    int type() const override { return Type; }
+
     explicit HealthBar(QObject* parent = nullptr);
     ~HealthBar() override;
 

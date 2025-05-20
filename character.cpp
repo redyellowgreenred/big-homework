@@ -45,35 +45,6 @@ Character::~Character() {
 }
 
 
-int Character::health() const{
-    return p_hp;
-}
-
-int Character::maxHealth() const
-{
-    return p_maxhp;
-}
-
-int Character::originalSpeed() const
-{
-    return p_originalSpeed;
-}
-
-int Character::moveSpeed() const
-{
-    return p_moveSpeed;
-}
-
-CharacterState Character::state() const
-{
-    return p_state;
-}
-
-bool Character::isAlive() const
-{
-    return p_hp > 0;
-}
-
 void Character::setHealth(int health)
 {
     if (p_hp == health) return;
@@ -108,13 +79,6 @@ void Character::setState(CharacterState state) {
     emit stateChanged(p_state);
 
 }
-
-void Character::setPos(const QPointF &pos)
-{
-    QGraphicsPixmapItem::setPos(pos);
-    emit positionChanged(pos);
-}
-
 
 void Character::moveTo(const QPointF& pos)
 {
@@ -159,9 +123,15 @@ void Character::addProp(std::unique_ptr<Prop> prop){
     }
 }
 
+void Character::deleteKnife(){
+    if (m_knives.size()){
+        m_knives.pop_back();
+    }
+}
+
 void Character::updateKnivesPosition() {
     QPointF charPos = pos();
-    int count = m_knives.size();
+    int count = knifeCount();
 
     if (count == 0) return; // No knives to update
 
@@ -178,22 +148,14 @@ void Character::updateKnivesPosition() {
         double radian = qDegreesToRadians(angle);
 
         // Calculate new position for the knife
-        double x = charPos.x() + m_knifeDistance * qCos(radian)*(0.1 + count * 0.05) + 30;
-        double y = charPos.y() + m_knifeDistance * qSin(radian)*(0.1 + count * 0.05) + 30;
+        double x = charPos.x() + qCos(radian) * getDistance() + 30;
+        double y = charPos.y() + qSin(radian) * getDistance() + 30;
 
         // Only update if position has changed (optional optimization)
         if (knife->pos() != QPointF(x, y)) {
             knife->setPos(x, y);
             knife->setRotation(angle + 180 + 90);  // Update rotation based on new position
         }
-    }
-}
-
-void Character::setMyHealthbar(HealthBar* bar)
-{
-    p_healthBar = bar;
-    if (p_healthBar) {
-        p_healthBar->setTargetCharacter(this);
     }
 }
 

@@ -20,6 +20,10 @@ HealthBar::HealthBar(QObject* parent)
     // 设置透明度为不透明
     setOpacity(1);
     qDebug() << "Set size and opacity for HealthBar";
+    //禁用碰撞
+    setFlag(QGraphicsItem::ItemIgnoresTransformations);
+    setFlag(QGraphicsItem::ItemIsFocusable, false);
+    setFlag(QGraphicsItem::ItemIsSelectable, false);
 }
 
 HealthBar::~HealthBar()

@@ -12,7 +12,7 @@ Player::Player(int mapRadius, QGraphicsItem* parent)
 
     // 设置定时器
     connect(movementTimer, &QTimer::timeout, this, &Player::onMovementTimeout);
-    movementTimer->start(15);
+    movementTimer->start(10);
 }
 
 void Player::addPressedKey(int key) {

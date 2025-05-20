@@ -26,6 +26,9 @@ class Prop : public QObject, public QGraphicsPixmapItem {
 private:
     bool m_isPicked = false;
 public:
+    enum { Type = UserType + 2 };
+    int type() const override { return Type; }
+
     explicit Prop(PropType type, QGraphicsItem* parent = nullptr);
 
     // 获取道具类型
@@ -50,6 +53,7 @@ public:
         default:
             break;
         }
+
 
     }
 
