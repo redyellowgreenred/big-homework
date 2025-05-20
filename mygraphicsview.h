@@ -3,8 +3,6 @@
 
 #include <QDebug>
 #include <QGraphicsEllipseItem>
-#include <QGraphicsPixmapItem>
-#include <QGraphicsView>
 #include <QKeyEvent>
 #include <QMovie>
 #include <QTimer>
@@ -43,6 +41,7 @@ public:
     explicit MyGraphicsView(QGraphicsScene *scene, QWidget *parent = nullptr);
     void generateProps(int count);
     void checkCollision();
+    void checkCharacterCollision(Character* character);
 
 protected:
     void keyPressEvent(QKeyEvent *event);

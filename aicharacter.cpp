@@ -10,14 +10,17 @@ AICharacter::AICharacter(int mapRadius, QGraphicsItem *parent)
     m_aiTimerId(-1),
     m_targetPlayer(nullptr),
     m_playerInSight(false),
-    m_detectionRadius(300.0)
+    m_detectionRadius(300.0),
+    m_moveSpeed(5.0) // 设置移动速度
 {
-    // 设置AI决策间隔(2-5秒随机)
-    int interval = QRandomGenerator::global()->bounded(2000, 5000);
+    int interval = QRandomGenerator::global()->bounded(1000, 3000);
     m_decisionTimer.setInterval(interval);
     connect(&m_decisionTimer, &QTimer::timeout, this, &AICharacter::makeDecision);
 
-    // 设置外观
+
+    connect(&m_movementTimer, &QTimer::timeout, this, &AICharacter::updateMovement);
+    m_movementTimer.start(40);
+
     loadAnimation(":/figs/capoo.gif");
     setScale(0.3);
 }
@@ -59,9 +62,7 @@ void AICharacter::makeDecision()
 {
     if (!isAlive()) return;
 
-    // 随机改变决策间隔
-    int interval = QRandomGenerator::global()->bounded(2000, 5000);
-    m_decisionTimer.setInterval(interval);
+    //瞎鸡儿走
     moveRandomly();
     // if (m_playerInSight) {
     //     // 根据AI状态决定行为
@@ -94,21 +95,45 @@ void AICharacter::moveRandomly()
 {
     if (!isAlive()) return;
 
-    // 在地图范围内随机选择一个点
+    // 随机角度和距离
     qreal angle = QRandomGenerator::global()->bounded(360);
-    qreal distance = QRandomGenerator::global()->bounded(100, 300);
+    qreal distance = QRandomGenerator::global()->bounded(200, 400);
 
-    QPointF newPos = pos() + QPointF(distance * std::cos(qDegreesToRadians(angle)),
-                                     distance * std::sin(qDegreesToRadians(angle)));
+    m_currentTarget = pos() + QPointF(
+                          distance * std::cos(qDegreesToRadians(angle)),
+                          distance * std::sin(qDegreesToRadians(angle))
+                          );
 
-    // 确保不超出地图边界
+    // 确保目标在场景内
     QRectF sceneRect = scene()->sceneRect();
-    newPos.setX(qBound(sceneRect.left() + 50, newPos.x(), sceneRect.right() - 50));
-    newPos.setY(qBound(sceneRect.top() + 50, newPos.y(), sceneRect.bottom() - 50));
+    m_currentTarget.setX(qBound(sceneRect.left() + 50, m_currentTarget.x(), sceneRect.right() - 50));
+    m_currentTarget.setY(qBound(sceneRect.top() + 50, m_currentTarget.y(), sceneRect.bottom() - 50));
 
-    moveTo(newPos);
+    m_isMoving = true;
 }
 
+void AICharacter::updateMovement()
+{
+    if (!m_isMoving || !isAlive()) return;
+
+    QPointF direction = m_currentTarget - pos();
+    qreal distance = std::sqrt(QPointF::dotProduct(direction, direction));
+
+    // 如果接近目标或超出边界，选择新目标
+    if (distance < 20 || !scene()->sceneRect().contains(pos())) {
+        moveRandomly();
+        return;
+    }
+
+    // 标准化方向并移动
+    direction /= distance;
+    QPointF newPos = pos() + direction * m_moveSpeed;
+    setPos(newPos);
+
+    // 更新动画
+    setState(CharacterState::Moving);
+    updateFrame();
+}
 // void AICharacter::chasePlayer()
 // {
 //     if (!m_playerInSight || !isAlive()) return;

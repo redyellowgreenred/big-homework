@@ -136,7 +136,20 @@ MyGraphicsView::MyGraphicsView(QGraphicsScene *scene, QWidget *parent)
 
     //初始化生成道具
     generateProps(100);
+
     //生成ai
+    const int aiCount = 5;
+    for (int i = 0; i < aiCount; i++){
+        auto ai = std::make_unique<AICharacter>(bgSize / 2, m_background);
+        ai->setScale(0.3);
+        ai->setPos(QPointF(
+            QRandomGenerator::global()->bounded(bgSize/4, bgSize*3/4),
+            QRandomGenerator::global()->bounded(bgSize/4, bgSize*3/4)
+            ));
+        ai->startAI(); // 启动AI行为
+        scene->addItem(ai.get());
+        m_aiCharacters.push_back(std::move(ai));
+    }
 }
 
 void MyGraphicsView::keyPressEvent(QKeyEvent *event) {
@@ -161,18 +174,30 @@ void MyGraphicsView::generateProps(int count) {
     }
 }
 
-template void Prop::interact<Player>(Player*);
+template void Prop::interact<Character>(Character*);
 //碰撞检测函数
 void MyGraphicsView::checkCollision() {
-    if (!m_player) return;
+    // 1. 检测玩家与道具的碰撞
+    checkCharacterCollision(m_player.get());
 
-    const qreal pickupRadius = 2.0;
-    QPointF playerPos = m_player->pos();
+    // 2. 检测每个AI与道具的碰撞
+    for (auto& ai : m_aiCharacters) {
+        if (ai && ai->isAlive()) {
+            checkCharacterCollision(ai.get());
+        }
+    }
+}
 
-    // 先获取大致矩形区域内的项
+void MyGraphicsView::checkCharacterCollision(Character* character) {
+    if (!character || !character->isAlive()) return;
+
+    const qreal pickupRadius = 50.0; // 拾取半径
+    QPointF charPos = character->pos();
+
+    // 检测区域
     QRectF detectArea(
-        playerPos.x() - pickupRadius + 1,
-        playerPos.y() - pickupRadius + 1,
+        charPos.x() - pickupRadius,
+        charPos.y() - pickupRadius,
         pickupRadius * 2,
         pickupRadius * 2
         );
@@ -181,11 +206,10 @@ void MyGraphicsView::checkCollision() {
 
     for (QGraphicsItem* item : items) {
         Prop* prop = dynamic_cast<Prop*>(item);
-        if (prop) {
-            // 计算距离
-            qreal distance = QLineF(m_player->pos(), prop->pos()).length();
-            if (distance < 50) {  // 拾取半径
-                prop->interact(m_player.get());
+        if (prop && !prop->isPicked()) {
+            qreal distance = QLineF(charPos, prop->pos()).length();
+            if (distance < pickupRadius) {
+                prop->interact(character);
             }
         }
     }

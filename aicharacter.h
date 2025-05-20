@@ -14,6 +14,7 @@ public:
 
     void startAI();
     void stopAI();
+    void updateMovement();
 
 protected:
     void timerEvent(QTimerEvent *event) override;
@@ -25,12 +26,20 @@ private slots:
     // void fleeFromPlayer();
 
 private:
+    QPointF m_currentTarget;
     int m_aiTimerId;
+
+    //两个大脑
     QTimer m_decisionTimer;
+    QTimer m_movementTimer;
+
     Character* m_targetPlayer;
     QPointF m_lastKnownPlayerPos;
     bool m_playerInSight;
     qreal m_detectionRadius;
+
+    qreal m_moveSpeed;
+    bool m_isMoving;
 };
 
 #endif // AICHARACTER_H

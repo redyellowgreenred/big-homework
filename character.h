@@ -43,6 +43,7 @@ private:
     bool m_isDead = false;
 
 protected:  // 改为protected以便子类访问
+    double m_baseAngle = 0;
     QMovie* q_movie;
     bool isAnimationLoaded;
     int p_hp;

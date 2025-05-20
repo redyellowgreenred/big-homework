@@ -32,6 +32,7 @@ Character::Character(int mapRadius, QGraphicsItem* parent)
         for (int i = 0; i < 4; ++i) {
             auto knife = std::make_unique<Prop>(PropType::Knife);
             knife->setZValue(10);
+            knife->pick();
             scene()->addItem(knife.get());
             addProp(std::move(knife));
             qDebug() << "Knife" << i << "added to scene at pos:" << m_knives.back()->pos();
@@ -165,21 +166,20 @@ void Character::updateKnivesPosition() {
     if (count == 0) return; // No knives to update
 
     // Increment the base angle for rotation
-    static double baseAngle = 0;
-    baseAngle += 2.0;
-    if (baseAngle >= 360.0) baseAngle -= 360.0;  // Keep baseAngle within 0-360 degrees
+    m_baseAngle += 2.0;
+    if (m_baseAngle >= 360.0) m_baseAngle -= 360.0;  // Keep baseAngle within 0-360 degrees
 
     double angleIncrement = 360.0 / count;  // Fixed angle increment for each knife
 
     // Pre-calculate the sine and cosine values for rotation
     for (int i = 0; i < count; ++i) {
         Prop* knife = m_knives[i].get();
-        double angle = baseAngle + (i * angleIncrement);
+        double angle = m_baseAngle + (i * angleIncrement);
         double radian = qDegreesToRadians(angle);
 
         // Calculate new position for the knife
-        double x = charPos.x() + m_knifeDistance * qCos(radian)*(0.8 + count * 0.1) + 30;
-        double y = charPos.y() + m_knifeDistance * qSin(radian)*(0.8 + count * 0.1) + 30;
+        double x = charPos.x() + m_knifeDistance * qCos(radian)*(0.1 + count * 0.05) + 30;
+        double y = charPos.y() + m_knifeDistance * qSin(radian)*(0.1 + count * 0.05) + 30;
 
         // Only update if position has changed (optional optimization)
         if (knife->pos() != QPointF(x, y)) {
