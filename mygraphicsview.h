@@ -44,6 +44,7 @@ public slots:
 
 public:
     explicit MyGraphicsView(QGraphicsScene *scene, QWidget *parent = nullptr);
+    ~MyGraphicsView();
     void generateProps(int count);
     void checkCollision1();
     void checkCollision2();

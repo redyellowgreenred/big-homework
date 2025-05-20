@@ -26,6 +26,9 @@ public:
 
     void setView(MyGraphicsView* view);
 
+signals:
+    void attack();
+
 private slots:
     void onMovementTimeout();
 };

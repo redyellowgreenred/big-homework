@@ -113,8 +113,9 @@ signals:
     void stateChanged(CharacterState newState);
     void died();
 
-protected slots:
+public slots:
     virtual void updateFrame() {}  // 空实现
+    // void throwAKnife(QPointF pos);
 };
 
 #endif // CHARACTER_H

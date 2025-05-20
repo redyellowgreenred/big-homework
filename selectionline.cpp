@@ -1,13 +1,17 @@
 #include "selectionline.h"
 #include "mygraphicsview.h"
 #include "character.h"
+#include "aicharacter.h" // 包含AI角色头文件
+#include <QGraphicsPixmapItem>
 #include <QPainter>
+#include <QPropertyAnimation>
+#include <QPixmap>
 
 SelectionLine::SelectionLine(QGraphicsItem* parent)
     : QGraphicsLineItem(parent) {
     // 初始化线条样式
     m_pen.setColor(QColor(255, 100, 100, 200)); // 半透明红色
-    m_pen.setWidth(15);
+    m_pen.setWidth(10);
     m_pen.setStyle(Qt::DashLine);
     setPen(m_pen);
 
@@ -17,6 +21,10 @@ SelectionLine::SelectionLine(QGraphicsItem* parent)
     m_animation->setStartValue(0.3);
     m_animation->setEndValue(1.0);
     m_animation->setEasingCurve(QEasingCurve::InOutQuad);
+}
+
+SelectionLine::~SelectionLine() {
+    stopAnimation();
 }
 
 void SelectionLine::setEndPoints(const QPointF& start, const QPointF& end) {
@@ -33,7 +41,7 @@ void SelectionLine::animate() {
     const std::vector<std::unique_ptr<AICharacter>>& aiCharacters = view->getAICharacters(); // 需在MyGraphicsView中添加public接口
 
     // 查找最近的AI
-    Character* nearestAI = nullptr;
+    nearestAI = nullptr;
     qreal minDistance = std::numeric_limits<qreal>::max();
     QPointF playerPos = player->pos();
 
@@ -46,19 +54,23 @@ void SelectionLine::animate() {
         }
     }
 
-    if (nearestAI) {
+    if (nearestAI && minDistance < 500) { // 500是有效范围阈值
         setEndPoints(playerPos, nearestAI->pos());
         m_animation->stop();
-        m_animation->setStartValue(opacity());
-        m_animation->setEndValue(1.0); // 显示线段
+        m_animation->setStartValue(0.0);
+        m_animation->setEndValue(1.0);
         m_animation->start();
+        setVisible(true);
+        m_isAnimating = true;
     } else {
-        // 无AI时隐藏线段
+        // 超出范围时完全隐藏
         m_animation->stop();
         m_animation->setStartValue(opacity());
-        m_animation->setEndValue(0.0); // 隐藏线段
+        m_animation->setEndValue(0.0);
         m_animation->start();
-    }
+        setVisible(false);
+        m_isAnimating = false;
+        }
 }
 
 void SelectionLine::stopAnimation() {
@@ -77,5 +89,83 @@ void SelectionLine::paint(QPainter* painter, const QStyleOptionGraphicsItem* opt
     if (m_isAnimating) {
         painter->setPen(QPen(QColor(255, 150, 150, 50), 10));
         painter->drawLine(line());
+    }
+}
+
+void SelectionLine::shoot() {
+    if (!m_isAnimating || !nearestAI || !player) return;
+    if (!player->knifeCount()) return;
+
+    // 获取玩家和AI位置
+    QPointF startPos = player->pos();
+    QPointF targetPos = nearestAI->pos();
+
+    // 创建飞刀视觉效果（修改此处）
+    QGraphicsPixmapItem* knife = new QGraphicsPixmapItem(nullptr); // 先不设置父对象
+    QPixmap knifePixmap(":/props/knife.png");
+    if (knifePixmap.isNull()) {
+        qDebug() << "Failed to load knife image!";
+        delete knife;
+        return;
+    }
+
+    // 设置飞刀属性
+    knife->setPixmap(knifePixmap);
+    knife->setPos(startPos);
+    knife->setZValue(10); // 确保显示在顶层
+    knife->setScale(0.2);
+
+    // 添加到场景（修改此处）
+    if (scene()) {
+        scene()->addItem(knife);
+    } else {
+        qDebug() << "Error: Scene is null!";
+        delete knife;
+        return;
+    }
+
+    // 计算飞刀朝向（保持不变）
+    QPointF direction = targetPos - startPos;
+    qreal angle = qRadiansToDegrees(qAtan2(direction.y(), direction.x())) - 90;
+    knife->setRotation(angle);
+
+    // 后续动画代码保持不变...
+    // 计算动画参数、创建定时器等...
+    // 添加到场景
+    scene()->addItem(knife);
+
+    // 计算动画参数
+    qreal distance = QLineF(startPos, targetPos).length();
+    int duration = qMax(static_cast<int>(distance / 6), 150); // 速度控制
+    int steps = duration / 16; // 每16ms更新一次（约60FPS）
+    int currentStep = 0;
+
+    // 创建定时器控制动画
+    QTimer* timer = new QTimer(this);
+    connect(timer, &QTimer::timeout, [=]() mutable {
+        if (currentStep >= steps || !knife->scene()) {
+            // 动画结束或场景已销毁
+            timer->stop();
+            scene()->removeItem(knife);
+            delete knife;
+            delete timer;
+            return;
+        }
+
+        // 线性插值计算当前位置
+        qreal t = static_cast<qreal>(currentStep) / steps;
+        QPointF currentPos = startPos + t * (targetPos - startPos);
+        knife->setPos(currentPos);
+        currentStep++;
+    });
+
+    timer->start(16); // 启动定时器
+
+    // 处理飞刀消耗和伤害逻辑
+    player->deleteKnife();
+    if (nearestAI->knifeCount()) {
+        nearestAI->deleteKnife(); // 双方飞刀抵消
+    } else {
+        nearestAI->setHealth(nearestAI->health() - 10); // 伤害AI
     }
 }

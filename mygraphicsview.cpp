@@ -108,8 +108,18 @@ MyGraphicsView::MyGraphicsView(QGraphicsScene *scene, QWidget *parent)
     m_line = std::make_unique<SelectionLine>();
     m_line->setPlayer(m_player.get());
     scene->addItem(m_line.get());
-    connect(&m_lineUpdateTimer, &QTimer::timeout, m_line.get(), &SelectionLine::animate);
-    m_lineUpdateTimer.start(10);
+    if (m_line) {
+        connect(&m_lineUpdateTimer, &QTimer::timeout, this, [this]() {
+            if (m_line && m_line->scene()) {
+                m_line->animate();
+            }
+        });
+        m_lineUpdateTimer.start(80);
+    } else {
+        qDebug() << "MyGraphicsView: m_line is not initialized!";
+    }
+
+    connect(m_player.get(), &Player::attack, m_line.get(), &SelectionLine::shoot);
 
     qreal scaleFactor = 0.3;
     m_player->setScale(scaleFactor);
@@ -127,7 +137,7 @@ MyGraphicsView::MyGraphicsView(QGraphicsScene *scene, QWidget *parent)
     // 路径运动定时器（每 30ms 更新位置）
     connect(&m_pathTimer, &QTimer::timeout, this,
             &MyGraphicsView::updateCirclePath);
-    connect(&m_pathTimer, &QTimer::timeout, this,
+    connect(&m_healthbarTimer, &QTimer::timeout, this,
             &MyGraphicsView::checkCollision1);
     connect(&m_pathTimer2, &QTimer::timeout, this,
             &MyGraphicsView::checkCollision2);
@@ -137,9 +147,9 @@ MyGraphicsView::MyGraphicsView(QGraphicsScene *scene, QWidget *parent)
     } else {
         qDebug() << "Failed to connect signal and slot";
     }
-    m_pathTimer.start(40);
+    m_pathTimer.start(50);
     m_pathTimer2.start(400);
-    m_healthbarTimer.start(60);
+    m_healthbarTimer.start(100);
 
     scene->addItem(m_healthBar.get());  // 必须添加到场景！
     healthBars.push_back(std::move(m_healthBar));
@@ -160,6 +170,10 @@ MyGraphicsView::MyGraphicsView(QGraphicsScene *scene, QWidget *parent)
             QRandomGenerator::global()->bounded(bgSize/4, bgSize*3/4)
             ));
         ai->startAI(); // 启动AI行为
+        if (!scene) {
+            qDebug() << "[ERROR] Scene is null!";
+            return;
+        }
         scene->addItem(ai.get());
         //给ai血条
         std::unique_ptr m_healthBar = std::make_unique<HealthBar>();
@@ -173,9 +187,24 @@ MyGraphicsView::MyGraphicsView(QGraphicsScene *scene, QWidget *parent)
     }
 }
 
+MyGraphicsView::~MyGraphicsView() {
+    m_pathTimer.stop();
+    m_pathTimer2.stop();
+    m_healthbarTimer.stop();
+}
+
 void MyGraphicsView::keyPressEvent(QKeyEvent *event) {
+    // 添加输入法事件检查
+    if (event->type() == QEvent::KeyPress && !event->text().isEmpty()) {
+        if (event->modifiers() & Qt::ControlModifier ||
+            event->modifiers() & Qt::AltModifier) {
+            QGraphicsView::keyPressEvent(event); // 交给父类处理输入法组合键
+            return;
+        }
+    }
+
     m_player->addPressedKey(event->key());
-    QGraphicsView::keyPressEvent(event);
+    QGraphicsView::keyPressEvent(event); // 确保父类也能处理
 }
 
 void MyGraphicsView::keyReleaseEvent(QKeyEvent *event) {
@@ -185,6 +214,10 @@ void MyGraphicsView::keyReleaseEvent(QKeyEvent *event) {
 
 //初始化道具生成
 void MyGraphicsView::generateProps(int count) {
+    if (!scene()) {
+        qWarning() << "Scene is null in generateProps";
+        return;
+    }
     QPointF center = m_background->boundingRect().center();
     PropFactory::setMapRadius(bgSize / 2);
 
@@ -253,6 +286,11 @@ void MyGraphicsView::checkPropCollision(Character* character) {
     const qreal pickupRadius = 50.0; // 拾取半径
     QPointF charPos = character->pos();
 
+    if (qIsNaN(charPos.x()) || qIsNaN(charPos.y())) {
+        qWarning() << "Invalid character position";
+        return;
+    }
+
     // 检测区域
     QRectF detectArea(
         charPos.x() - pickupRadius,
@@ -261,23 +299,38 @@ void MyGraphicsView::checkPropCollision(Character* character) {
         pickupRadius * 2
         );
 
-    QList<QGraphicsItem*> items = scene()->items(detectArea);
+    QList<QGraphicsItem*> items;
+    try {
+        items = scene()->items(detectArea);
+    } catch (...) {
+        qCritical() << "Exception when getting scene items";
+        return;
+    }
+
 
     for (QGraphicsItem* item : items) {
-        // 排除玩家角色本身
-        if (item == character || item->type() == HealthBar::Type) {
+        if (!item || item == character || item->type() == HealthBar::Type) {
             continue;
         }
 
-        // 检查是否为道具
-        Prop* prop = qgraphicsitem_cast<Prop*>(item);
-        if (prop && !prop->isPicked()) {
+        Prop* prop = dynamic_cast<Prop*>(item); // 使用dynamic_cast更安全
+        if (prop && prop->scene()) {
+            // 检查prop是否已被标记删除
+            if (prop->isPicked() || !prop->scene()) {
+                continue;
+            }
+
             qreal distance = QLineF(charPos, prop->pos()).length();
             if (distance < pickupRadius) {
-                prop->interact(character);
+                try {
+                    prop->interact(character);
+                } catch (...) {
+                    qCritical() << "Exception in prop interaction";
+                }
             }
         }
     }
+
 }
 
 void MyGraphicsView::onPlayerDeath() {

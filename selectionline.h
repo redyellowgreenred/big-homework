@@ -12,14 +12,15 @@
 class Character;
 
 class SelectionLine : public QObject, public QGraphicsLineItem {
+
 public:
     explicit SelectionLine(QGraphicsItem* parent = nullptr);
+    ~SelectionLine();
 
     void setEndPoints(const QPointF& start, const QPointF& end);
     void setPlayer(Character* character){player = character;}
-    void animate();
     void stopAnimation();
-
+    void throwAKnife();
 protected:
     void paint(QPainter* painter, const QStyleOptionGraphicsItem* option, QWidget* widget = nullptr) override;
 
@@ -28,5 +29,11 @@ private:
     QPen m_pen;
     bool m_isAnimating = false;
     Character* player;
+    Character* nearestAI;
+
+public slots:
+    void shoot();
+    void animate();
 };
+
 #endif // SELECTIONLINE_H

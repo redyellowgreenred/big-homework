@@ -18,6 +18,7 @@ Player::Player(int mapRadius, QGraphicsItem* parent)
 void Player::addPressedKey(int key) {
     pressedKeys.insert(key);
     if (key == Qt::Key_R) setHealth(p_hp - 10);
+    if (key == Qt::Key_J) emit attack();
 }
 
 void Player::removePressedKey(int key) {
