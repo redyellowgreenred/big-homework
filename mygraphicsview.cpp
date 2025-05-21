@@ -110,21 +110,25 @@ MyGraphicsView::MyGraphicsView(QGraphicsScene *scene, QWidget *parent)
     m_player->loadAnimation(":/figs/capoo.gif");
 
     //加载索敌线
-    m_line = std::make_unique<SelectionLine>();
+        m_line = std::make_unique<SelectionLine>(m_player.get(), nullptr, nullptr);
     m_line->setPlayer(m_player.get());
+    m_line->setmPlayer(m_player.get());
     scene->addItem(m_line.get());
-    if (m_line) {
-        connect(&m_lineUpdateTimer, &QTimer::timeout, this, [this]() {
-            if (m_line && m_line->scene()) {
-                m_line->animate();
-            }
-        });
-        m_lineUpdateTimer.start(80);
-    } else {
-        qDebug() << "MyGraphicsView: m_line is not initialized!";
-    }
+    // if (m_line) {
+    //     connect(&m_lineUpdateTimer, &QTimer::timeout, this, [this]() {
+    //         if (m_line && m_line->scene()) {
+    //             m_line->animate();
+    //         }
+    //     });
+    //     m_lineUpdateTimer.start(80);
+    // } else {
+    //     qDebug() << "MyGraphicsView: m_line is not initialized!";
+    // }
 
-    connect(m_player.get(), &Player::attack, m_line.get(), &SelectionLine::shoot);
+    // connect(m_player.get(), &Player::attack, m_line.get(), &SelectionLine::shoot);
+    lines.push_back(std::move(m_line));
+
+    connect(m_player.get(), &Player::attack, lines[0].get(), &SelectionLine::shoot);
 
     qreal scaleFactor = 0.3;
     m_player->setScale(scaleFactor);
@@ -146,6 +150,10 @@ MyGraphicsView::MyGraphicsView(QGraphicsScene *scene, QWidget *parent)
             &MyGraphicsView::checkCollision1);
     connect(&m_pathTimer2, &QTimer::timeout, this,
             &MyGraphicsView::checkCollision2);
+    connect(&m_pathTimer3, &QTimer::timeout, this,
+            [this](){
+                MyGraphicsView::generateProps(5);
+    });
     QMetaObject::Connection conn = connect(&m_healthbarTimer, &QTimer::timeout, m_healthBar.get(), &HealthBar::updateHealthBar);
     if (conn) {
         qDebug() << "Signal and slot connected successfully";
@@ -154,6 +162,7 @@ MyGraphicsView::MyGraphicsView(QGraphicsScene *scene, QWidget *parent)
     }
     m_pathTimer.start(50);
     m_pathTimer2.start(400);
+    m_pathTimer3.start(3000);
     m_healthbarTimer.start(100);
 
     scene->addItem(m_healthBar.get());  // 必须添加到场景！
@@ -187,9 +196,24 @@ MyGraphicsView::MyGraphicsView(QGraphicsScene *scene, QWidget *parent)
         scene->addItem(m_healthBar.get());
         m_healthBar->setZValue(10);
         QMetaObject::Connection conn = connect(&m_healthbarTimer, &QTimer::timeout, m_healthBar.get(), &HealthBar::updateHealthBar);
+
+        // 初始化 AI 的索敌线
+        auto line = std::make_unique<SelectionLine>(ai.get(), m_player.get(), nullptr);
+        line->setmPlayer(m_player.get());
+        scene->addItem(line.get());
+        lines.push_back(std::move(line));
+
         m_aiCharacters.push_back(std::move(ai));
         healthBars.push_back(std::move(m_healthBar));
     }
+    connect(&m_lineUpdateTimer, &QTimer::timeout, this, [this]() {
+        for (auto& lined d : lines) {
+            if (line && line->scene()) {
+                line->animate();
+            }
+        }
+    });
+    m_lineUpdateTimer.start(80);
 
     connect(this, &MyGraphicsView::victory, this, &MyGraphicsView::onVictory);
 }
@@ -198,6 +222,7 @@ MyGraphicsView::~MyGraphicsView() {
     // 停止所有定时器
     m_pathTimer.stop();
     m_pathTimer2.stop();
+    m_pathTimer3.stop();
     m_healthbarTimer.stop();
     m_lineUpdateTimer.stop();
 

@@ -115,7 +115,6 @@ signals:
 
 public slots:
     virtual void updateFrame() {}  // 空实现
-    // void throwAKnife(QPointF pos);
 };
 
 #endif // CHARACTER_H

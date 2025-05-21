@@ -36,6 +36,7 @@ class ShoesEffect : public PropEffect {
     Q_OBJECT
 
 public:
+
     explicit ShoesEffect(int duration, QObject* parent = nullptr, int speedBoost = 100);
     void apply(Character* character, std::unique_ptr<Prop>) override;
     void remove(Character* character) override;

@@ -14,11 +14,13 @@ class Character;
 class SelectionLine : public QObject, public QGraphicsLineItem {
 
 public:
-    explicit SelectionLine(QGraphicsItem* parent = nullptr);
+    SelectionLine(Character* me, Character* nearestAI, QGraphicsItem* parent = nullptr);
     ~SelectionLine();
 
     void setEndPoints(const QPointF& start, const QPointF& end);
-    void setPlayer(Character* character){player = character;}
+    void setmPlayer(Character* character){player = character;}
+    void setPlayer(Character* character){me = character;}
+    void setNearestPlayer(Character* character){nearestAI = character;}
     void stopAnimation();
     void throwAKnife();
 protected:
@@ -29,7 +31,9 @@ private:
     QPen m_pen;
     bool m_isAnimating = false;
     Character* player;
+    Character* me;
     Character* nearestAI;
+    QTimer* shootTimer; // 新增定时器，用于控制射击频率
 
 public slots:
     void shoot();

@@ -160,49 +160,6 @@ void Character::updateKnivesPosition() {
     }
 }
 
-// void Character::throwAKnife(QPointF targetPos) {
-//     // 创建飞刀视觉效果（不关联到实际道具系统）
-//     QGraphicsPixmapItem* visualKnife = new QGraphicsPixmapItem();
-//     visualKnife->setZValue(10);
-
-//     // 设置飞刀图片
-//     QPixmap knifePixmap(":/props/knife.png");
-//     if (knifePixmap.isNull()) {
-//         qDebug() << "Failed to load knife icon image!";
-//         delete visualKnife;
-//         return;
-//     }
-//     visualKnife->setPixmap(knifePixmap);
-//     visualKnife->setPos(pos()); // 从角色当前位置发射
-
-//     // 添加到场景
-//     if (!scene()) {
-//         qDebug() << "[ERROR] Scene is null, cannot add visual knife!";
-//         delete visualKnife;
-//         return;
-//     }
-//     scene()->addItem(visualKnife);
-
-//     // 创建移动动画 - 关键修改点
-//     QPropertyAnimation* throwAnimation = new QPropertyAnimation();
-//     throwAnimation->setTargetObject(visualKnife);
-//     throwAnimation->setPropertyName("pos");
-//     throwAnimation->setStartValue(pos());
-//     throwAnimation->setEndValue(targetPos);
-//     throwAnimation->setDuration(qMax(static_cast<int>(distance * 10), 300); // 最小300ms
-
-//     // 动画结束后删除视觉飞刀
-//     connect(throwAnimation, &QPropertyAnimation::finished, [visualKnife, throwAnimation]() {
-//         if (visualKnife->scene()) {
-//             visualKnife->scene()->removeItem(visualKnife);
-//         }
-//         delete visualKnife;
-//         throwAnimation->deleteLater();
-//     });
-
-//     throwAnimation->start(QAbstractAnimation::DeleteWhenStopped);
-// }
-
 void Character::loadAnimation(const QString& gifPath) {
     if (q_movie) {
         q_movie->stop();

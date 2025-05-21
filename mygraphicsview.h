@@ -23,6 +23,7 @@ private:
 
     QTimer m_pathTimer;
     QTimer m_pathTimer2;
+    QTimer m_pathTimer3;
     QTimer m_healthbarTimer;
     QTimer m_lineUpdateTimer;
     const int SQUARE_SIZE = 500;  // 运动轨迹正方形边长
@@ -30,6 +31,7 @@ private:
     QPointF initPoint;
     std::vector<std::unique_ptr<HealthBar>> healthBars;
     std::vector<std::unique_ptr<AICharacter>> m_aiCharacters;
+    std::vector<std::unique_ptr<SelectionLine>> lines;
 
     void checkAllAIDead();
     QMutex m_collisionMutex;

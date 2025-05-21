@@ -7,10 +7,14 @@
 #include <QPropertyAnimation>
 #include <QPixmap>
 
-SelectionLine::SelectionLine(QGraphicsItem* parent)
-    : QGraphicsLineItem(parent) {
+SelectionLine::SelectionLine(Character* me, Character* nearestAI, QGraphicsItem* parent)
+    : QGraphicsLineItem(parent), me(me), nearestAI(nearestAI) {
     // 初始化线条样式
-    m_pen.setColor(QColor(255, 100, 100, 200)); // 半透明红色
+    if (me == player) {
+        m_pen.setColor(QColor(255, 100, 100, 250)); // 半透明红色
+    } else {
+        m_pen.setColor(QColor(0, 0, 255, 20)); // 半透明蓝色
+    }
     m_pen.setWidth(10);
     m_pen.setStyle(Qt::DashLine);
     setPen(m_pen);
@@ -21,6 +25,11 @@ SelectionLine::SelectionLine(QGraphicsItem* parent)
     m_animation->setStartValue(0.3);
     m_animation->setEndValue(1.0);
     m_animation->setEasingCurve(QEasingCurve::InOutQuad);
+
+    // 设置 AI 射击间隔
+    shootTimer = new QTimer(this);
+    shootTimer->setInterval(1000); // 1秒间隔
+    connect(shootTimer, &QTimer::timeout, this, &SelectionLine::shoot);
 }
 
 SelectionLine::~SelectionLine() {
@@ -32,45 +41,70 @@ void SelectionLine::setEndPoints(const QPointF& start, const QPointF& end) {
 }
 
 void SelectionLine::animate() {
-    if (!player) return;
+    if (!player || !me) return;
 
-    // 获取所有AI角色
-    MyGraphicsView* view = qobject_cast<MyGraphicsView*>(scene()->views().first());
-    if (!view) return;
-
-    const std::vector<std::unique_ptr<AICharacter>>& aiCharacters = view->getAICharacters(); // 需在MyGraphicsView中添加public接口
-
-    // 查找最近的AI
-    nearestAI = nullptr;
-    qreal minDistance = std::numeric_limits<qreal>::max();
-    QPointF playerPos = player->pos();
-
-    for (auto& ai : aiCharacters) {
-        if (!ai || !ai->isAlive()) continue;
-        qreal distance = QLineF(playerPos, ai->pos()).length();
-        if (distance < minDistance) {
-            minDistance = distance;
-            nearestAI = ai.get();
+    if (me != player){
+        qreal distance = QLineF(me->pos(), nearestAI->pos()).length();
+        if (nearestAI && distance < 500) { // 500是有效范围阈值
+            setEndPoints(me->pos(), nearestAI->pos());
+            m_animation->stop();
+            m_animation->setStartValue(0.0);
+            m_animation->setEndValue(1.0);
+            m_animation->start();
+            setVisible(true);
+            m_isAnimating = true;
+            if (!shootTimer->isActive()) {
+                shootTimer->start();
+            }
+        } else {
+            // 超出范围时完全隐藏
+            m_animation->stop();
+            m_animation->setStartValue(opacity());
+            m_animation->setEndValue(0.0);
+            m_animation->start();
+            setVisible(false);
+            m_isAnimating = false;
+            shootTimer->stop();
         }
     }
+    else{
+    // 获取所有AI角色
+        MyGraphicsView* view = qobject_cast<MyGraphicsView*>(scene()->views().first());
+        if (!view) return;
 
-    if (nearestAI && minDistance < 500) { // 500是有效范围阈值
-        setEndPoints(playerPos, nearestAI->pos());
-        m_animation->stop();
-        m_animation->setStartValue(0.0);
-        m_animation->setEndValue(1.0);
-        m_animation->start();
-        setVisible(true);
-        m_isAnimating = true;
-    } else {
-        // 超出范围时完全隐藏
-        m_animation->stop();
-        m_animation->setStartValue(opacity());
-        m_animation->setEndValue(0.0);
-        m_animation->start();
-        setVisible(false);
-        m_isAnimating = false;
+        const std::vector<std::unique_ptr<AICharacter>>& aiCharacters = view->getAICharacters(); // 需在MyGraphicsView中添加public接口
+    // 查找最近的AI
+        nearestAI = nullptr;
+        qreal minDistance = std::numeric_limits<qreal>::max();
+        QPointF playerPos = player->pos();
+
+        for (auto& ai : aiCharacters) {
+            if (!ai || !ai->isAlive()) continue;
+            qreal distance = QLineF(playerPos, ai->pos()).length();
+            if (distance < minDistance) {
+                minDistance = distance;
+                nearestAI = ai.get();
+            }
         }
+
+        if (nearestAI && minDistance < 500) { // 500是有效范围阈值
+            setEndPoints(playerPos, nearestAI->pos());
+            m_animation->stop();
+            m_animation->setStartValue(0.0);
+            m_animation->setEndValue(1.0);
+            m_animation->start();
+            setVisible(true);
+            m_isAnimating = true;
+        } else {
+            // 超出范围时完全隐藏
+            m_animation->stop();
+            m_animation->setStartValue(opacity());
+            m_animation->setEndValue(0.0);
+            m_animation->start();
+            setVisible(false);
+            m_isAnimating = false;
+            }
+    }
 }
 
 void SelectionLine::stopAnimation() {
@@ -86,18 +120,23 @@ void SelectionLine::paint(QPainter* painter, const QStyleOptionGraphicsItem* opt
     QGraphicsLineItem::paint(painter, option, widget);
 
     // 添加发光效果（可选）
-    if (m_isAnimating) {
-        painter->setPen(QPen(QColor(255, 150, 150, 50), 10));
+    if (me == player) {
+        // 玩家的索敌线发光效果
+        painter->setPen(QPen(QColor(255, 255, 0, 200), 15, Qt::DashLine));
+        painter->drawLine(line());
+    } else {
+        // AI 的索敌线发光效果
+        painter->setPen(QPen(QColor(0, 255, 0, 20), 15, Qt::DashLine));
         painter->drawLine(line());
     }
 }
 
 void SelectionLine::shoot() {
-    if (!m_isAnimating || !nearestAI || !player) return;
-    if (!player->knifeCount()) return;
+    if (!m_isAnimating || !nearestAI || !player || !me) return;
+    if (!me->knifeCount()) return;
 
     // 获取玩家和AI位置
-    QPointF startPos = player->pos();
+    QPointF startPos = me->pos();
     QPointF targetPos = nearestAI->pos();
 
     // 创建飞刀视觉效果（修改此处）
@@ -162,7 +201,7 @@ void SelectionLine::shoot() {
     timer->start(16); // 启动定时器
 
     // 处理飞刀消耗和伤害逻辑
-    player->deleteKnife();
+    me->deleteKnife();
     if (nearestAI->knifeCount()) {
         nearestAI->deleteKnife(); // 双方飞刀抵消
     } else {

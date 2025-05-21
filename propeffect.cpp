@@ -33,11 +33,13 @@ ShoesEffect::ShoesEffect(int duration,QObject* parent, int speedBoost)
 void ShoesEffect::apply(Character* character, std::unique_ptr<Prop> prop) {
     if (isActive) {
         // 如果效果已激活，先移除旧图标
-        if (m_icon && m_icon->scene()) {
-            m_icon->scene()->removeItem(m_icon);
+        if (m_icon) {
+            if (m_icon->scene()) {
+                m_icon->scene()->removeItem(m_icon);
+            }
+            delete m_icon;
+            m_icon = nullptr;
         }
-        delete m_icon;
-        m_icon = nullptr;
     }
     // 提升移动速度
     character->setMoveSpeed(character->originalSpeed() + speedBoost);
@@ -79,10 +81,12 @@ void ShoesEffect::updateIconPosition(Character* character) {
 }
 
 void ShoesEffect::remove(Character* character) {
-    if (updateTimer) {
+    if (updateTimer && updateTimer->isActive()) {
         updateTimer->stop();
     }
-    m_positionTimer.stop();
+    if (m_positionTimer.isActive()) {
+        m_positionTimer.stop();
+    }
 
     // 恢复原始速度
     character->setMoveSpeed(character->originalSpeed());
