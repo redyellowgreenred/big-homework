@@ -20,5 +20,7 @@
         <file>props/tree.png</file>
         <file>props/healthbar/-1.png</file>
         <file>figs/dead.png</file>
+        <file>figs/victory.png</file>
+        <file>figs/lose.png</file>
     </qresource>
 </RCC>

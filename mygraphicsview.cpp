@@ -9,6 +9,11 @@
 #include <QPainter>
 #include <QTimer>
 #include <QMessageBox>
+#include <QLabel>
+#include <QPushButton>
+#include <QHBoxLayout>
+#include <QGraphicsProxyWidget>
+
 
 const int bgSize = 3600;
 // 槽函数: 处理信号, 展示游戏窗口
@@ -185,12 +190,35 @@ MyGraphicsView::MyGraphicsView(QGraphicsScene *scene, QWidget *parent)
         m_aiCharacters.push_back(std::move(ai));
         healthBars.push_back(std::move(m_healthBar));
     }
+
+    connect(this, &MyGraphicsView::victory, this, &MyGraphicsView::onVictory);
 }
 
 MyGraphicsView::~MyGraphicsView() {
+    // 停止所有定时器
     m_pathTimer.stop();
     m_pathTimer2.stop();
     m_healthbarTimer.stop();
+    m_lineUpdateTimer.stop();
+
+    // 确保所有异步操作完成
+    QCoreApplication::processEvents();
+
+    // 清理AI角色
+    for (auto& ai : m_aiCharacters) {
+        if (ai && ai->scene()) {
+            ai->scene()->removeItem(ai.get());
+        }
+    }
+    m_aiCharacters.clear();
+
+    // 清理血条
+    for (auto& bar : healthBars) {
+        if (bar && bar->scene()) {
+            bar->scene()->removeItem(bar.get());
+        }
+    }
+    healthBars.clear();
 }
 
 void MyGraphicsView::keyPressEvent(QKeyEvent *event) {
@@ -231,10 +259,12 @@ void MyGraphicsView::generateProps(int count) {
 template void Prop::interact<Character>(Character*);
 //碰撞检测函数
 void MyGraphicsView::checkCollision1() {
-    // 1. 检测玩家与道具的碰撞
-    checkPropCollision(m_player.get());
+    QMutexLocker locker(&m_collisionMutex);
 
-    // 2. 检测每个AI与道具的碰撞
+    if (m_player && m_player->isAlive()) {
+        checkPropCollision(m_player.get());
+    }
+
     for (auto& ai : m_aiCharacters) {
         if (ai && ai->isAlive()) {
             checkPropCollision(ai.get());
@@ -243,16 +273,27 @@ void MyGraphicsView::checkCollision1() {
 }
 
 void MyGraphicsView::checkCollision2() {
-    for (size_t i = 0; i < m_aiCharacters.size(); ++i){
-        checkCharacterCollision(m_player.get(), m_aiCharacters[i].get());
-    }
+    QMutexLocker locker(&m_collisionMutex);
 
-    // 检测 AI 和 AI 之间的碰撞
-    for (size_t i = 0; i < m_aiCharacters.size(); ++i) {
-        for (size_t j = i + 1; j < m_aiCharacters.size(); ++j) {
-            checkCharacterCollision(m_aiCharacters[i].get(), m_aiCharacters[j].get());
+    if (m_player && m_player->isAlive()) {
+        for (auto& ai : m_aiCharacters) {
+            if (ai && ai->isAlive()) {
+                checkCharacterCollision(m_player.get(), ai.get());
+            }
         }
     }
+
+    // AI之间的碰撞检测
+    for (size_t i = 0; i < m_aiCharacters.size(); ++i) {
+        if (!m_aiCharacters[i] || !m_aiCharacters[i]->isAlive()) continue;
+
+        for (size_t j = i + 1; j < m_aiCharacters.size(); ++j) {
+            if (m_aiCharacters[j] && m_aiCharacters[j]->isAlive()) {
+                checkCharacterCollision(m_aiCharacters[i].get(), m_aiCharacters[j].get());
+            }
+        }
+    }
+    checkAllAIDead();
 }
 
 void MyGraphicsView::checkCharacterCollision(Character* character1, Character* character2){
@@ -281,8 +322,9 @@ void MyGraphicsView::checkCharacterCollision(Character* character1, Character* c
 }
 
 void MyGraphicsView::checkPropCollision(Character* character) {
-    if (!character || !character->isAlive()) return;
-
+    if (!character || !character->isAlive() || !scene() || !m_background) {
+        return;
+    }
     const qreal pickupRadius = 50.0; // 拾取半径
     QPointF charPos = character->pos();
 
@@ -291,13 +333,14 @@ void MyGraphicsView::checkPropCollision(Character* character) {
         return;
     }
 
-    // 检测区域
+    QRectF sceneRect = scene()->sceneRect();
     QRectF detectArea(
-        charPos.x() - pickupRadius,
-        charPos.y() - pickupRadius,
+        qBound(sceneRect.left(), charPos.x() - pickupRadius, sceneRect.right()),
+        qBound(sceneRect.top(), charPos.y() - pickupRadius, sceneRect.bottom()),
         pickupRadius * 2,
         pickupRadius * 2
         );
+
 
     QList<QGraphicsItem*> items;
     try {
@@ -313,7 +356,7 @@ void MyGraphicsView::checkPropCollision(Character* character) {
             continue;
         }
 
-        Prop* prop = dynamic_cast<Prop*>(item); // 使用dynamic_cast更安全
+        Prop* prop = qgraphicsitem_cast<Prop*>(item);
         if (prop && prop->scene()) {
             // 检查prop是否已被标记删除
             if (prop->isPicked() || !prop->scene()) {
@@ -336,11 +379,128 @@ void MyGraphicsView::checkPropCollision(Character* character) {
 void MyGraphicsView::onPlayerDeath() {
     m_pathTimer.stop();
     m_player->setEnabled(false);
+    m_pathTimer.stop();
 
-    QMessageBox::StandardButton reply = QMessageBox::question(
-        this, "游戏结束", "你已死亡！是否重新开始？",
-        QMessageBox::Yes | QMessageBox::No
-        );
+    // 创建胜利图片
+    QPixmap victoryPixmap(":/figs/lose.png");
+    victoryPixmap = victoryPixmap.scaled(200, 200, Qt::KeepAspectRatio); // 调整图片大小
+    QLabel* victoryLabel = new QLabel(this);
+    victoryLabel->setPixmap(victoryPixmap);
+    victoryLabel->setAlignment(Qt::AlignCenter);
 
-    emit gameOver(reply == QMessageBox::Yes); // 发出游戏结束信号
+    // 创建按钮布局
+    QPushButton* restartBtn = new QPushButton("重新开始");
+    QPushButton* exitBtn = new QPushButton("退出游戏");
+
+    QHBoxLayout* buttonLayout = new QHBoxLayout();
+    buttonLayout->addWidget(restartBtn);
+    buttonLayout->addWidget(exitBtn);
+
+    QVBoxLayout* mainLayout = new QVBoxLayout();
+    mainLayout->addWidget(victoryLabel);
+    mainLayout->addLayout(buttonLayout);
+    mainLayout->setSpacing(10); // 设置布局间距
+
+    // 创建对话框
+    QDialog* dialog = new QDialog(this);
+    dialog->setLayout(mainLayout);
+    dialog->setWindowTitle("游戏胜利");
+    dialog->setWindowFlags(Qt::Dialog | Qt::FramelessWindowHint);
+    dialog->resize(300, 250); // 设置对话框大小
+
+    int rank = 1;
+
+    for (auto& ai : m_aiCharacters) {
+        if (ai && ai->isAlive()) {
+            rank++;
+        }
+    }
+
+    setPlayerRank(rank);
+
+    if (m_playerRank != -1) {
+        QLabel* rankLabel = new QLabel(QString("你的排名: %1").arg(m_playerRank), this);
+        rankLabel->setAlignment(Qt::AlignCenter);
+        mainLayout->addWidget(rankLabel);
+    }
+
+    // 连接按钮信号
+    connect(restartBtn, &QPushButton::clicked, [this, dialog]() {
+        dialog->close();
+        emit gameOver(true);
+    });
+
+    connect(exitBtn, &QPushButton::clicked, [this, dialog]() {
+        dialog->close();
+        emit gameOver(false);
+    });
+
+    // 显示对话框
+    dialog->exec();
+}
+
+void MyGraphicsView::onVictory() {
+    m_pathTimer.stop();
+
+    // 创建胜利图片
+    QPixmap victoryPixmap(":/figs/victory.png");
+    victoryPixmap = victoryPixmap.scaled(200, 200, Qt::KeepAspectRatio); // 调整图片大小
+    QLabel* victoryLabel = new QLabel(this);
+    victoryLabel->setPixmap(victoryPixmap);
+    victoryLabel->setAlignment(Qt::AlignCenter);
+
+    // 创建按钮布局
+    QPushButton* restartBtn = new QPushButton("重新开始");
+    QPushButton* exitBtn = new QPushButton("退出游戏");
+
+    QHBoxLayout* buttonLayout = new QHBoxLayout();
+    buttonLayout->addWidget(restartBtn);
+    buttonLayout->addWidget(exitBtn);
+
+    QVBoxLayout* mainLayout = new QVBoxLayout();
+    mainLayout->addWidget(victoryLabel);
+    mainLayout->addLayout(buttonLayout);
+    mainLayout->setSpacing(10); // 设置布局间距
+
+    // 创建对话框
+    QDialog* dialog = new QDialog(this);
+    dialog->setLayout(mainLayout);
+    dialog->setWindowTitle("游戏胜利");
+    dialog->setWindowFlags(Qt::Dialog | Qt::FramelessWindowHint);
+    dialog->resize(300, 250); // 设置对话框大小
+
+    setPlayerRank(1);
+    if (m_playerRank != -1) {
+        QLabel* rankLabel = new QLabel(QString("你的排名: %1").arg(m_playerRank), this);
+        rankLabel->setAlignment(Qt::AlignCenter);
+        mainLayout->addWidget(rankLabel);
+    }
+
+    // 连接按钮信号
+    connect(restartBtn, &QPushButton::clicked, [this, dialog]() {
+        dialog->close();
+        emit gameOver(true);
+    });
+
+    connect(exitBtn, &QPushButton::clicked, [this, dialog]() {
+        dialog->close();
+        emit gameOver(false);
+    });
+
+    // 显示对话框
+    dialog->exec();
+}
+
+void MyGraphicsView::checkAllAIDead() {
+    bool allDead = true;
+    for (auto& ai : m_aiCharacters) {
+        if (ai && ai->isAlive()) {
+            allDead = false;
+            break;
+        }
+    }
+
+    if (allDead) {
+        emit victory();  // 触发胜利信号
+    }
 }

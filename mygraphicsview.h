@@ -9,6 +9,7 @@
 #include "player.h"
 #include "aicharacter.h"
 #include "selectionline.h"
+#include <QMutex>
 
 class MyGraphicsView : public QGraphicsView {
     Q_OBJECT
@@ -30,8 +31,14 @@ private:
     std::vector<std::unique_ptr<HealthBar>> healthBars;
     std::vector<std::unique_ptr<AICharacter>> m_aiCharacters;
 
+    void checkAllAIDead();
+    QMutex m_collisionMutex;
+    int m_playerRank = -1;
+
 signals:
     void gameOver(bool restart); // 游戏结束信号
+    void allAIDead();  // 新增信号
+    void victory();     // 新增胜利信号
 
 public slots:
     // 处理信号, 展示游戏窗口
@@ -41,6 +48,8 @@ public slots:
     void updateCirclePath();
 
     void onPlayerDeath();
+
+    void onVictory();
 
 public:
     explicit MyGraphicsView(QGraphicsScene *scene, QWidget *parent = nullptr);
@@ -52,6 +61,9 @@ public:
     void checkCharacterCollision(Character* character1, Character* character2);
     const std::vector<std::unique_ptr<AICharacter>>& getAICharacters() const {
         return m_aiCharacters;
+    }
+    void setPlayerRank(int rank) {
+        m_playerRank = rank;
     }
 
 protected:
