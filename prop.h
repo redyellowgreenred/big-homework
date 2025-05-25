@@ -41,14 +41,22 @@ public:
 
     template <typename CharacterType>
     void interact(CharacterType* character) {
-        if (!character || !character->isAlive()) return;
-        // 基础交互逻辑
+        if (!character || !character->isAlive()) {
+            qDebug() << "Prop::interact: Character is null or not alive";
+            return;
+        }
         switch(m_type){
         case PropType::Knife:
-        case PropType::Shoes:
         case PropType::Hp:
             m_isPicked = true;
             character->addProp(std::unique_ptr<Prop>(this));
+            break;
+        case PropType::Shoes:
+            if (character->alreadyHasShoes())
+                break;
+            m_isPicked = true;
+            character->addProp(std::unique_ptr<Prop>(this));
+            character->addShoes();
             break;
         default:
             break;

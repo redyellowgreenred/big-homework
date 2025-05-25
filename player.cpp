@@ -5,6 +5,7 @@ Player::Player(int mapRadius, QGraphicsItem* parent)
     : Character(mapRadius, parent),
     animationTimer(new QTimer(this)),
     movementTimer(new QTimer(this)),
+    knifeTimer(new QTimer(this)),
     capooGifPath(":/figs/capoo.gif") {
 
     // 初始化动画系统
@@ -13,6 +14,8 @@ Player::Player(int mapRadius, QGraphicsItem* parent)
     // 设置定时器
     connect(movementTimer, &QTimer::timeout, this, &Player::onMovementTimeout);
     movementTimer->start(10);
+    connect(knifeTimer, &QTimer::timeout, this, &Player::knifeTimeout);
+    knifeTimer->start(2000);
 }
 
 void Player::addPressedKey(int key) {
@@ -77,6 +80,16 @@ void Player::onMovementTimeout() {
 
     QPointF newPos = currentPos + QPointF(direction.x(), direction.y());
     setPos(newPos);
+}
+
+void Player::knifeTimeout() {
+    if (knifeCount() < 4){
+        auto knife = std::make_unique<Prop>(PropType::Knife);
+        knife->setZValue(10);
+        knife->pick();
+        scene()->addItem(knife.get());
+        addProp(std::move(knife));
+    }
 }
 
 void Player::updateFrame() {

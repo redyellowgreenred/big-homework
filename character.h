@@ -32,8 +32,6 @@ class Character : public QObject, public QGraphicsPixmapItem {
     Q_PROPERTY(QPointF pos READ pos WRITE setPos)
 
 private:
-    //飞刀存储系统
-    std::vector<std::unique_ptr<Prop>> m_knives;
     const float m_knifeDistance = 60; // 增大旋转半径
 
     //血条（改为普通指针）
@@ -42,7 +40,11 @@ private:
     QPixmap m_deadPixmap;       // 死亡静态图片
     bool m_isDead = false;
 
+    //屎山鞋子
+    bool hasShoes = false;
+
 protected:  // 改为protected以便子类访问
+    std::vector<std::unique_ptr<Prop>> m_knives;
     double m_baseAngle = 0;
     QMovie* q_movie;
     bool isAnimationLoaded;
@@ -106,6 +108,10 @@ public:
             p_healthBar->setTargetCharacter(this);
         }
     }
+
+    bool alreadyHasShoes(){return hasShoes;}
+    void addShoes(){hasShoes = true;}
+    void deleteShoes(){hasShoes = false;}
 
 signals:
     void healthChanged(int newHealth);

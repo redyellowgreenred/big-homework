@@ -16,11 +16,11 @@ Character::Character(int mapRadius, QGraphicsItem* parent)
     setFlag(QGraphicsItem::ItemIsFocusable);
     setFlag(QGraphicsItem::ItemSendsGeometryChanges);
 
-    moveAnimation = new QPropertyAnimation(this, "pos", this);
+    // moveAnimation = new QPropertyAnimation(this, "pos", this);
 
     // 构建映射
     m_propEffects[PropType::Knife] = std::make_unique<KnifeEffect>();
-    m_propEffects[PropType::Shoes] = std::make_unique<ShoesEffect>(4400);
+    m_propEffects[PropType::Shoes] = std::make_unique<ShoesEffect>(4000);
     m_propEffects[PropType::Hp] = std::make_unique<HpEffect>();
 
     loadDeadImage(":/figs/dead.png");
@@ -40,6 +40,8 @@ Character::Character(int mapRadius, QGraphicsItem* parent)
         }
         updateKnivesPosition(); // 立即更新位置
     });
+
+
 }
 
 Character::~Character() {

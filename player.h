@@ -9,6 +9,7 @@ class Player : public Character {
 private:
     QTimer* animationTimer;
     QTimer* movementTimer;
+    QTimer* knifeTimer;
     QSet<int> pressedKeys;
     QString capooGifPath;
 
@@ -31,6 +32,7 @@ signals:
 
 private slots:
     void onMovementTimeout();
+    void knifeTimeout();
 };
 
 #endif // PLAYER_H

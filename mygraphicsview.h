@@ -46,9 +46,6 @@ public slots:
     // 处理信号, 展示游戏窗口
     void handleEvokeGameSignal();
 
-    // 更新运动圆形的路径
-    void updateCirclePath();
-
     void onPlayerDeath();
 
     void onVictory();
@@ -67,6 +64,9 @@ public:
     void setPlayerRank(int rank) {
         m_playerRank = rank;
     }
+    void stopAllTimers();
+
+    void showEndGameDialog(const QPixmap& pixmap, const QString& title, int rank);
 
 protected:
     void keyPressEvent(QKeyEvent *event);

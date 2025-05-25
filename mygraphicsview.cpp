@@ -14,51 +14,12 @@
 #include <QHBoxLayout>
 #include <QGraphicsProxyWidget>
 
+#define COLLISION_DEBUG
 
 const int bgSize = 3600;
 // 槽函数: 处理信号, 展示游戏窗口
 void MyGraphicsView::handleEvokeGameSignal() {
     this->show();
-}
-
-// 槽函数: 更新运动圆形的路径（这里未涉及角色移动，保持不变）
-void MyGraphicsView::updateCirclePath() {
-    // 沿正方形轨迹移动
-    // 这里用的是什么坐标系?
-    const int speed = 3;
-    QPointF localPos = m_moving_circle->pos() - initPoint;
-
-    switch (currentEdge) {
-    case 0:  // 上边向右移动
-        localPos.rx() += speed;
-        if (localPos.x() > SQUARE_SIZE / 2) {
-            localPos.rx() = SQUARE_SIZE / 2;
-            currentEdge = 1;
-        }
-        break;
-    case 1:  // 右边向下移动
-        localPos.ry() += speed;
-        if (localPos.y() > SQUARE_SIZE / 2) {
-            localPos.ry() = SQUARE_SIZE / 2;
-            currentEdge = 2;
-        }
-        break;
-    case 2:  // 下边向左移动
-        localPos.rx() -= speed;
-        if (localPos.x() < -SQUARE_SIZE / 2) {
-            localPos.rx() = -SQUARE_SIZE / 2;
-            currentEdge = 3;
-        }
-        break;
-    case 3:  // 左边向上移动
-        localPos.ry() -= speed;
-        if (localPos.y() < -SQUARE_SIZE / 2) {
-            localPos.ry() = -SQUARE_SIZE / 2;
-            currentEdge = 0;
-        }
-        break;
-    }
-    m_moving_circle->setPos(localPos + initPoint);
 }
 
 MyGraphicsView::MyGraphicsView(QGraphicsScene *scene, QWidget *parent)
@@ -92,14 +53,8 @@ MyGraphicsView::MyGraphicsView(QGraphicsScene *scene, QWidget *parent)
     m_background = scene->addPixmap(circularBg);
     m_background->setPos(0, 0);
     scene->setSceneRect(0, 0, bgSize, bgSize);
-
-    // 创建运动圆形
-    m_moving_circle = new QGraphicsEllipseItem(-15, -15, 30, 30, m_background);
-    m_moving_circle->setBrush(Qt::red);
     // 将圆形设置在背景的中心
     QPointF bgCenter = m_background->boundingRect().center();
-    m_moving_circle->setPos(bgCenter);  // 初始位置
-    initPoint = bgCenter;
 
     // 加载人物 GIF
     m_player = std::make_unique<Player>(bgSize / 2, m_background);
@@ -143,9 +98,6 @@ MyGraphicsView::MyGraphicsView(QGraphicsScene *scene, QWidget *parent)
 
     //角色死亡事件绑定
     connect(m_player.get(), &Player::died, this, &MyGraphicsView::onPlayerDeath);
-    // 路径运动定时器（每 30ms 更新位置）
-    connect(&m_pathTimer, &QTimer::timeout, this,
-            &MyGraphicsView::updateCirclePath);
     connect(&m_healthbarTimer, &QTimer::timeout, this,
             &MyGraphicsView::checkCollision1);
     connect(&m_pathTimer2, &QTimer::timeout, this,
@@ -161,7 +113,7 @@ MyGraphicsView::MyGraphicsView(QGraphicsScene *scene, QWidget *parent)
         qDebug() << "Failed to connect signal and slot";
     }
     m_pathTimer.start(50);
-    m_pathTimer2.start(400);
+    m_pathTimer2.start(200);
     m_pathTimer3.start(3000);
     m_healthbarTimer.start(100);
 
@@ -175,7 +127,7 @@ MyGraphicsView::MyGraphicsView(QGraphicsScene *scene, QWidget *parent)
     generateProps(100);
 
     //生成ai
-    const int aiCount = 5;
+    const int aiCount = 6;
     for (int i = 0; i < aiCount; i++){
         auto ai = std::make_unique<AICharacter>(bgSize / 2, m_background);
         ai->setScale(0.3);
@@ -207,7 +159,7 @@ MyGraphicsView::MyGraphicsView(QGraphicsScene *scene, QWidget *parent)
         healthBars.push_back(std::move(m_healthBar));
     }
     connect(&m_lineUpdateTimer, &QTimer::timeout, this, [this]() {
-        for (auto& lined d : lines) {
+        for (auto& line  : lines) {
             if (line && line->scene()) {
                 line->animate();
             }
@@ -347,6 +299,11 @@ void MyGraphicsView::checkCharacterCollision(Character* character1, Character* c
 }
 
 void MyGraphicsView::checkPropCollision(Character* character) {
+    // #ifdef COLLISION_DEBUG
+    //     qDebug() << "[Collision] Checking for character:" << character
+    //              << "Alive:" << (character ? character->isAlive() : false)
+    //              << "Thread:" << QThread::currentThread();
+    // #endif
     if (!character || !character->isAlive() || !scene() || !m_background) {
         return;
     }
@@ -375,7 +332,6 @@ void MyGraphicsView::checkPropCollision(Character* character) {
         return;
     }
 
-
     for (QGraphicsItem* item : items) {
         if (!item || item == character || item->type() == HealthBar::Type) {
             continue;
@@ -401,19 +357,11 @@ void MyGraphicsView::checkPropCollision(Character* character) {
 
 }
 
-void MyGraphicsView::onPlayerDeath() {
-    m_pathTimer.stop();
-    m_player->setEnabled(false);
-    m_pathTimer.stop();
+void MyGraphicsView::showEndGameDialog(const QPixmap& pixmap, const QString& title, int rank) {
+    QLabel* titleLabel = new QLabel(this);
+    titleLabel->setPixmap(pixmap);
+    titleLabel->setAlignment(Qt::AlignCenter);
 
-    // 创建胜利图片
-    QPixmap victoryPixmap(":/figs/lose.png");
-    victoryPixmap = victoryPixmap.scaled(200, 200, Qt::KeepAspectRatio); // 调整图片大小
-    QLabel* victoryLabel = new QLabel(this);
-    victoryLabel->setPixmap(victoryPixmap);
-    victoryLabel->setAlignment(Qt::AlignCenter);
-
-    // 创建按钮布局
     QPushButton* restartBtn = new QPushButton("重新开始");
     QPushButton* exitBtn = new QPushButton("退出游戏");
 
@@ -422,98 +370,60 @@ void MyGraphicsView::onPlayerDeath() {
     buttonLayout->addWidget(exitBtn);
 
     QVBoxLayout* mainLayout = new QVBoxLayout();
-    mainLayout->addWidget(victoryLabel);
+    mainLayout->addWidget(titleLabel);
     mainLayout->addLayout(buttonLayout);
-    mainLayout->setSpacing(10); // 设置布局间距
+    mainLayout->setSpacing(10);
 
-    // 创建对话框
     QDialog* dialog = new QDialog(this);
     dialog->setLayout(mainLayout);
-    dialog->setWindowTitle("游戏胜利");
+    dialog->setWindowTitle(title);
     dialog->setWindowFlags(Qt::Dialog | Qt::FramelessWindowHint);
-    dialog->resize(300, 250); // 设置对话框大小
+    dialog->resize(300, 250);
+
+    if (rank != -1) {
+        QLabel* rankLabel = new QLabel(QString("你的排名: %1").arg(rank), this);
+        rankLabel->setAlignment(Qt::AlignCenter);
+        mainLayout->addWidget(rankLabel);
+    }
+
+    connect(restartBtn, &QPushButton::clicked, [this, dialog]() {
+        dialog->close();
+        emit gameOver(true);
+    });
+
+    connect(exitBtn, &QPushButton::clicked, [this, dialog]() {
+        dialog->close();
+        emit gameOver(false);
+    });
+
+    dialog->exec();
+}
+
+void MyGraphicsView::onPlayerDeath() {
+    stopAllTimers();
+    m_player->setEnabled(false);
+
+    QPixmap losePixmap(":/figs/lose.png");
+    losePixmap = losePixmap.scaled(200, 200, Qt::KeepAspectRatio);
 
     int rank = 1;
-
     for (auto& ai : m_aiCharacters) {
         if (ai && ai->isAlive()) {
             rank++;
         }
     }
-
     setPlayerRank(rank);
-
-    if (m_playerRank != -1) {
-        QLabel* rankLabel = new QLabel(QString("你的排名: %1").arg(m_playerRank), this);
-        rankLabel->setAlignment(Qt::AlignCenter);
-        mainLayout->addWidget(rankLabel);
-    }
-
-    // 连接按钮信号
-    connect(restartBtn, &QPushButton::clicked, [this, dialog]() {
-        dialog->close();
-        emit gameOver(true);
-    });
-
-    connect(exitBtn, &QPushButton::clicked, [this, dialog]() {
-        dialog->close();
-        emit gameOver(false);
-    });
-
-    // 显示对话框
-    dialog->exec();
+    showEndGameDialog(losePixmap, "游戏失败", m_playerRank);
 }
 
 void MyGraphicsView::onVictory() {
-    m_pathTimer.stop();
+    stopAllTimers();
+    m_player->setEnabled(false);
 
-    // 创建胜利图片
     QPixmap victoryPixmap(":/figs/victory.png");
-    victoryPixmap = victoryPixmap.scaled(200, 200, Qt::KeepAspectRatio); // 调整图片大小
-    QLabel* victoryLabel = new QLabel(this);
-    victoryLabel->setPixmap(victoryPixmap);
-    victoryLabel->setAlignment(Qt::AlignCenter);
-
-    // 创建按钮布局
-    QPushButton* restartBtn = new QPushButton("重新开始");
-    QPushButton* exitBtn = new QPushButton("退出游戏");
-
-    QHBoxLayout* buttonLayout = new QHBoxLayout();
-    buttonLayout->addWidget(restartBtn);
-    buttonLayout->addWidget(exitBtn);
-
-    QVBoxLayout* mainLayout = new QVBoxLayout();
-    mainLayout->addWidget(victoryLabel);
-    mainLayout->addLayout(buttonLayout);
-    mainLayout->setSpacing(10); // 设置布局间距
-
-    // 创建对话框
-    QDialog* dialog = new QDialog(this);
-    dialog->setLayout(mainLayout);
-    dialog->setWindowTitle("游戏胜利");
-    dialog->setWindowFlags(Qt::Dialog | Qt::FramelessWindowHint);
-    dialog->resize(300, 250); // 设置对话框大小
-
+    victoryPixmap = victoryPixmap.scaled(200, 200, Qt::KeepAspectRatio);
     setPlayerRank(1);
-    if (m_playerRank != -1) {
-        QLabel* rankLabel = new QLabel(QString("你的排名: %1").arg(m_playerRank), this);
-        rankLabel->setAlignment(Qt::AlignCenter);
-        mainLayout->addWidget(rankLabel);
-    }
-
-    // 连接按钮信号
-    connect(restartBtn, &QPushButton::clicked, [this, dialog]() {
-        dialog->close();
-        emit gameOver(true);
-    });
-
-    connect(exitBtn, &QPushButton::clicked, [this, dialog]() {
-        dialog->close();
-        emit gameOver(false);
-    });
-
-    // 显示对话框
-    dialog->exec();
+    showEndGameDialog(victoryPixmap, "游戏胜利", m_playerRank);
 }
 
 void MyGraphicsView::checkAllAIDead() {
@@ -526,6 +436,18 @@ void MyGraphicsView::checkAllAIDead() {
     }
 
     if (allDead) {
-        emit victory();  // 触发胜利信号
+        // 先停止所有AI活动
+        for (auto& ai : m_aiCharacters) {
+            if (ai) ai->stopAI();
+        }
+        onVictory();
     }
+}
+
+void MyGraphicsView::stopAllTimers() {
+    m_pathTimer.stop();
+    m_pathTimer2.stop();
+    m_pathTimer3.stop();
+    m_healthbarTimer.stop();
+    m_lineUpdateTimer.stop();
 }

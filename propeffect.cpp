@@ -1,4 +1,5 @@
 #include "propeffect.h"
+#include "character.h"
 #include <QGraphicsPixmapItem>
 #include <QtCore/qmath.h> // 确保包含必要的头文件
 
@@ -25,46 +26,34 @@ void KnifeEffect::remove(Character* character) {
 }
 
 ShoesEffect::ShoesEffect(int duration,QObject* parent, int speedBoost)
-    : PropEffect(parent), speedBoost(speedBoost), duration(duration) {
-    updateTimer = std::make_unique<QTimer>(this);
-    m_positionTimer.setInterval(30);
+    : PropEffect(parent), speedBoost(speedBoost), duration(duration),isActive(false) {
+    updateTimer = std::make_unique<QTimer>(this);  // 提前创建定时器
+    m_positionTimer.setParent(this);
 }
 
 void ShoesEffect::apply(Character* character, std::unique_ptr<Prop> prop) {
+    // 1. 先清理旧状态
     if (isActive) {
-        // 如果效果已激活，先移除旧图标
-        if (m_icon) {
-            if (m_icon->scene()) {
-                m_icon->scene()->removeItem(m_icon);
-            }
-            delete m_icon;
-            m_icon = nullptr;
-        }
+        remove(character);  // 强制移除旧效果
     }
-    // 提升移动速度
+
+    // 2. 提升速度
     character->setMoveSpeed(character->originalSpeed() + speedBoost);
 
-    // 断开之前的连接
-    disconnect(updateTimer.get(), &QTimer::timeout, nullptr, nullptr);
-
-    // 设置定时器，超时后移除效果（只保留一种方式）
+    // 3. 设置持续时间（单次触发）
     updateTimer->singleShot(duration, [this, character]() {
         remove(character);
     });
 
-    // 创建图标并设置为角色的子项
+    // 4. 创建新图标
     m_icon = new QGraphicsPixmapItem(QPixmap(":/props/shoes.png"), character);
     m_icon->setScale(0.1);
     m_icon->setZValue(15);
     m_icon->setFlag(QGraphicsItem::ItemIgnoresTransformations);
+    updateIconPosition(character);  // 初始位置
 
-    // 初始位置调整
-    updateIconPosition(character);
-
-    // 连接位置更新定时器
-    connect(&m_positionTimer, &QTimer::timeout,
-            [this, character]() { updateIconPosition(character); });
-    m_positionTimer.start();
+    // 5. 启动位置更新定时器
+    m_positionTimer.start(30);  // 30ms更新一次位置
 
     isActive = true;
 }
@@ -81,22 +70,26 @@ void ShoesEffect::updateIconPosition(Character* character) {
 }
 
 void ShoesEffect::remove(Character* character) {
-    if (updateTimer && updateTimer->isActive()) {
-        updateTimer->stop();
-    }
-    if (m_positionTimer.isActive()) {
-        m_positionTimer.stop();
-    }
+    if (!isActive) return;
 
-    // 恢复原始速度
+    // 1. 停止所有定时器
+    updateTimer->stop();
+    m_positionTimer.stop();
+
+    // 2. 恢复速度
     character->setMoveSpeed(character->originalSpeed());
 
-    // 图标由Qt的父对象机制自动删除，只需置空指针
-    if (m_icon && m_icon->scene()) {
-        m_icon->scene()->removeItem(m_icon);
+    // 3. 移除图标
+    if (m_icon) {
+        if (m_icon->scene()) {
+            m_icon->scene()->removeItem(m_icon);
+        }
+        delete m_icon;  // 显式删除
+        m_icon = nullptr;
     }
-    m_icon = nullptr;
+
     isActive = false;
+    character->deleteShoes();
 }
 
 TreeEffect::TreeEffect(QObject* parent)

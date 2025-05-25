@@ -26,6 +26,8 @@ private slots:
     // void fleeFromPlayer();
 
 private:
+    float m_safetyMargin;
+    bool isPositionValid(const QPointF& pos) const;
     QPointF m_currentTarget;
     int m_aiTimerId;
 

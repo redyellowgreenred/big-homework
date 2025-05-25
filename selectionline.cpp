@@ -20,7 +20,7 @@ SelectionLine::SelectionLine(Character* me, Character* nearestAI, QGraphicsItem*
     setPen(m_pen);
 
     // 初始化动画
-    m_animation = new QPropertyAnimation(this);
+    m_animation = new QPropertyAnimation(this, QByteArray());
     m_animation->setDuration(1000);
     m_animation->setStartValue(0.3);
     m_animation->setEndValue(1.0);
@@ -41,7 +41,10 @@ void SelectionLine::setEndPoints(const QPointF& start, const QPointF& end) {
 }
 
 void SelectionLine::animate() {
-    if (!player || !me) return;
+    if (!player || !me || me->state() == CharacterState::Dead){
+        setVisible(false);
+        return;
+    }
 
     if (me != player){
         qreal distance = QLineF(me->pos(), nearestAI->pos()).length();
